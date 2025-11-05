@@ -1,0 +1,282 @@
+{% extends "esign/base_login.html" %}
+{% block content %}
+
+<div class="d-flex justify-content-center align-items-center min-vh-100">
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-sm-12 col-md-6 offset-md-4 col-lg-4 offset-lg-4">
+        <div class="login-wrapper">
+          <div class="row">
+            <div class="col-sm-12 text-center mb-3">
+              <h3 class="mb-0">Login to your account</h3>
+            </div>
+          </div>
+
+          <!-- ✅ Success & general error messages -->
+          {% if messages %}
+            {% for message in messages %}
+              {% if message.tags == 'success' %}
+                <small  id="msgg" class="text-success fw-semibold d-block text-center mb-2">{{ message }}</small>
+              {% elif message.tags == 'error' and 'Invalid OTP' not in message %}
+                <small  id="msgg" class="text-danger fw-semibold d-block text-center mb-2">{{ message }}</small>
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+        <p id="otpStatus" class="text-center mt-2 fw-semibold small"></p>
+
+         <form method="post" id="loginForm">
+  {% csrf_token %}
+  <div class="card p-4 shadow">
+
+    <!-- Email Field -->
+    <div class="mb-3" id="emailField">
+      <label class="form-label">Email <span class="text-danger">*</span></label>
+      <input
+        type="email"
+        id="email"
+        name="email"
+        class="form-control"
+        value="{{ request.POST.email|default_if_none:'' }}"
+        placeholder="Enter your email"
+        required
+      >
+    </div>
+
+    <!-- Hidden Email (for OTP retry) -->
+    <input
+      type="hidden"
+      id="hiddenEmail"
+      name="hidden_email"
+      value="{{ request.POST.email|default_if_none:'' }}"
+    >
+
+    <!-- OTP Field -->
+    <div class="mb-3" id="otpField" style="display:none;">
+      <label class="form-label">Enter Email OTP</label>
+      <input
+        type="tel"
+        name="otp"
+        id="otp"
+        class="form-control"
+        placeholder="Enter Email OTP"
+        oninput="if(this.value.length > 6) this.value = this.value.slice(0,6);"
+        maxlength="6"
+      >
+
+      <!-- Error for OTP -->
+      {% if messages %}
+        {% for message in messages %}
+          {% if message.tags == 'error' %}
+            <small class="text-danger fw-semibold d-block mt-1">{{ message }}</small>
+          {% endif %}
+        {% endfor %}
+      {% endif %}
+
+      <!-- ✅ Resend OTP link (right aligned under input) -->
+      <div id="resendOtpBtnWrapper" class="text-end mt-1" style="display:none;">
+        <a href="javascript:void(0);" id="resendOtpBtn" class="small text-decoration-none text-primary fw-semibold">
+          Resend OTP
+        </a>
+      </div>
+    </div>
+
+    <!-- Send OTP Button -->
+    <div class="mb-3" id="sendOtpBtnWrapper">
+      <button type="submit" name="send_otp" value="1" class="btn btn-info w-100">
+        Send OTP on Email
+      </button>
+    </div>
+
+    <!-- Divider -->
+    <div class="text-center my-3 form-or-container" id="orDivider">
+      <span class="text-uppercase border rounded-circle p-2">or</span>
+    </div>
+
+    <!-- Password Field -->
+    <div class="mb-3 position-relative" id="passwordField">
+      <label class="form-label">Password</label>
+      <input
+        type="password"
+        id="password"
+        name="password"
+        class="form-control"
+        placeholder="Enter password"
+      >
+      <i
+        class="fa fa-eye position-absolute"
+        id="togglePassword"
+        style="right:15px; top:38px; cursor:pointer;"
+      ></i>
+    </div>
+
+    <!-- Login Button -->
+    <div class="text-center mt-3">
+      <button type="submit" name="login" value="1" class="btn btn-primary px-5 mb-3">
+        Login
+      </button>
+      <p>
+        Don't have an account?
+        <a href="{% url 'user_signup' %}">Signup</a>
+      </p>
+    </div>
+
+    <!-- Error box (for JS validation) -->
+    <div id="formError" class="text-danger text-center fw-semibold py-1 d-none"></div>
+
+  </div>
+</form>
+
+        
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const loginForm = document.getElementById('loginForm');
+  const emailField = document.getElementById('emailField');
+  const hiddenEmail = document.getElementById('hiddenEmail');
+  const otpField = document.getElementById('otpField');
+  const passwordField = document.getElementById('passwordField');
+  const sendOtpBtnWrapper = document.getElementById('sendOtpBtnWrapper');
+  const resendOtpBtnWrapper = document.getElementById('resendOtpBtnWrapper');
+  const orDivider = document.getElementById('orDivider');
+  const errorBox = document.getElementById('formError');
+  const passwordInput = document.getElementById('password');
+  const emailInput = document.getElementById('email');
+  const otpStatus = document.getElementById('otpStatus');
+
+  // Messages from Django
+  const messages = `{% if messages %}{% for m in messages %}{{ m }}{% endfor %}{% endif %}`;
+  const invalidOtp = messages.includes("Invalid OTP");
+  const invalidLogin = messages.includes("Invalid email or password");
+
+  const otpSent = "{{ request.POST.send_otp|default:'' }}";
+
+  // Show OTP field only if OTP flow and not invalid login
+  if ((otpSent === "1" || invalidOtp) && !invalidLogin) {
+    emailField.style.display = "none";
+    passwordField.style.display = "none";
+    orDivider.style.display = "none";
+    sendOtpBtnWrapper.style.display = "none";
+    resendOtpBtnWrapper.style.display = "block";
+    otpField.style.display = "block";
+
+    // preserve email in hidden field
+    const emailVal = hiddenEmail.value || emailInput.value;
+    hiddenEmail.value = emailVal;
+    emailInput.value = emailVal;
+  } else {
+    // If login failed with invalid credentials, show all fields
+    emailField.style.display = "block";
+    passwordField.style.display = "block";
+    orDivider.style.display = "block";
+    sendOtpBtnWrapper.style.display = "block";
+    otpField.style.display = "none";
+    resendOtpBtnWrapper.style.display = "none";
+  }
+
+  // Form validation
+  loginForm.addEventListener('submit', function(e) {
+
+    const otp = document.getElementById('otp').value.trim();
+    const password = passwordInput.value.trim();
+    const submitter = e.submitter ? e.submitter.name : '';
+
+    // Clear old error
+    errorBox.classList.add('d-none');
+    errorBox.textContent = '';
+
+    if (submitter === 'login') {
+      if (otpField.style.display === "block") {
+        // 🔹 OTP mode active
+        if (otp.length === 0) {
+          e.preventDefault();
+          showOtpError("Please enter the OTP.");
+        } else if (otp.length !== 6) {
+          e.preventDefault();
+          showOtpError("OTP must be 6 digits.");
+        } else {
+          passwordInput.value = ""; // ignore password if OTP flow
+        }
+      } else if (!password) {
+        // 🔹 Password login mode
+        e.preventDefault();
+        errorBox.textContent = "Please enter your password or send OTP.";
+        errorBox.classList.remove('d-none');
+      }
+    }
+  });
+
+  function showOtpError(message) {
+    let errorMsg = otpField.querySelector(".otp-error-msg");
+    if (!errorMsg) {
+      errorMsg = document.createElement("small");
+      errorMsg.className = "text-danger fw-semibold d-block mt-1 otp-error-msg";
+      otpField.appendChild(errorMsg);
+    }
+    errorMsg.textContent = message;
+  }
+
+  // Toggle password visibility
+  // Toggle password visibility
+  document.getElementById('togglePassword').addEventListener('click', function() {
+      const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+      passwordInput.setAttribute('type', type);
+
+      // Toggle icons correctly
+      this.classList.toggle('fa-eye');
+      this.classList.toggle('fa-eye-slash');
+  });
+
+
+  // AJAX Resend OTP
+  const resendOtpBtn = document.getElementById('resendOtpBtn');
+  resendOtpBtn?.addEventListener('click', function() {
+    const email = hiddenEmail.value.trim() || emailInput.value.trim();
+    if (!email) {
+      otpStatus.textContent = "Email is missing.";
+      otpStatus.classList.add("text-danger");
+      return;
+    }
+
+    resendOtpBtn.disabled = true;
+    otpStatus.textContent = "Resending OTP...";
+    otpStatus.classList.remove("text-danger", "text-success");
+    otpStatus.classList.add("text-info");
+    document.getElementById("msgg")?.classList.add("d-none");
+
+    fetch("{% url 'resend_otp' %}", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "X-CSRFToken": "{{ csrf_token }}",
+      },
+      body: new URLSearchParams({ email: email })
+    })
+    .then(res => res.json())
+    .then(data => {
+      resendOtpBtn.disabled = false;
+      if (data.success) {
+        otpStatus.textContent = `OTP sent to ${email}. ${data.otp} Please check your inbox.`;
+        otpStatus.classList.remove("text-danger", "text-info");
+        otpStatus.classList.add("text-success");
+      } else {
+        otpStatus.textContent = data.message;
+        otpStatus.classList.remove("text-success", "text-info");
+        otpStatus.classList.add("text-danger");
+      }
+    })
+    .catch(() => {
+      resendOtpBtn.disabled = false;
+      otpStatus.textContent = "Something went wrong!";
+      otpStatus.classList.remove("text-success", "text-info");
+      otpStatus.classList.add("text-danger");
+    });
+  });
+});
+</script>
+
+
+{% endblock %}

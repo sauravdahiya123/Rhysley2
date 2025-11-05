@@ -1,0 +1,1 @@
+Static files folder — add CSS/JS (e.g., pdf.js) here.

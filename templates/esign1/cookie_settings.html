@@ -1,0 +1,183 @@
+{% extends 'esign/base.html' %}
+{% load static %}
+{% block content %}
+
+
+<body>
+
+
+    <div class="page-wrapper">
+
+        <!-- Page Content-->
+        <!-- <div class="page-content"> -->
+            <div class="container-fluid">
+                <!-- <div class="row">
+                    <div class="col-sm-12">
+                        <div class="page-title-box d-md-flex justify-content-md-between align-items-center">
+                            <div>
+                                <h4 class="page-title mb-1">Quick Actions</h4>
+                                <p class="text-muted mb-0 fw-normal fs-12">Streamline your document workflow with our comprehensive software</p>
+                            </div>
+                            <div class="">
+                                <ol class="breadcrumb mb-0">
+                                    <li class="breadcrumb-item"><a href="#">E-Sign</a>
+                                    </li>
+                                    <li class="breadcrumb-item active">Dashboard</li>
+                                </ol>
+                            </div>                            
+                        </div>
+                    </div>
+                    </div> -->
+                <div class="row justify-content-center align-items-center">
+                    <div class="col-lg-12 text-center">
+                        <span class="rounded-circle p-4 border my-4 d-inline-block" style="width:140px; height: 140px; line-height: 110px;"><i class="iconoir-half-cookie display-4"></i></span>
+                        <h3 class="mb-2 mt-0 fw-medium">Cookie Settings</h3>
+                        <p class="text-muted mb-0 fw-normal fs-12">This page is currently under development. We will be back shorty. <br class="d-inline d-sm-block"> Thank you for your patience.</p>
+                    </div><!--end col-->
+                    <!-- <div class="col-lg-6 text-center">
+                        <img src="{% static 'assets/images/esignatures.png' %}" alt="" class="img-fluid">
+                    </div> -->
+                    
+                </div><!--end row-->
+                
+            </div><!-- container -->
+
+            <!--Start Rightbar-->
+            <!--Start Rightbar/offcanvas-->
+            <div class="offcanvas offcanvas-end" tabindex="-1" id="Appearance" aria-labelledby="AppearanceLabel">
+                <div class="offcanvas-header border-bottom justify-content-between">
+                  <h5 class="m-0 font-14" id="AppearanceLabel">Appearance</h5>
+                  <button type="button" class="btn-close text-reset p-0 m-0 align-self-center" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                </div>
+                <div class="offcanvas-body">  
+                    <h6>Account Settings</h6>
+                    <div class="p-2 text-start mt-3">
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" id="settings-switch1">
+                            <label class="form-check-label" for="settings-switch1">Auto updates</label>
+                        </div><!--end form-switch-->
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" id="settings-switch2" checked>
+                            <label class="form-check-label" for="settings-switch2">Location Permission</label>
+                        </div><!--end form-switch-->
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="settings-switch3">
+                            <label class="form-check-label" for="settings-switch3">Show offline Contacts</label>
+                        </div><!--end form-switch-->
+                    </div><!--end /div-->
+                    <h6>General Settings</h6>
+                    <div class="p-2 text-start mt-3">
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" id="settings-switch4">
+                            <label class="form-check-label" for="settings-switch4">Show me Online</label>
+                        </div><!--end form-switch-->
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" id="settings-switch5" checked>
+                            <label class="form-check-label" for="settings-switch5">Status visible to all</label>
+                        </div><!--end form-switch-->
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="settings-switch6">
+                            <label class="form-check-label" for="settings-switch6">Notifications Popup</label>
+                        </div><!--end form-switch-->
+                    </div><!--end /div-->               
+                </div><!--end offcanvas-body-->
+            </div>
+            <!--end Rightbar/offcanvas-->
+            <!--end Rightbar-->
+            <!--Start Footer-->
+            
+           <!--  <footer class="footer text-center text-sm-start d-print-none">
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card mb-0 rounded-bottom-0">
+                                <div class="card-body">
+                                    <p><a href="privacy-policy.html" class="d-inline-block pe-2 me-3">Privacy Policy</a>
+                                        <a href="terms-of-service.html" class="d-inline-block pe-2 me-3">Terms of Service</a>
+                                        <a href="cookie-settings.html" class="d-inline-block pe-2 me-3">Cookie Settings</a></p>
+                                    <p class="text-muted mb-0">
+                                        ©
+                                        <script> document.write(new Date().getFullYear()) </script>
+                                        Helixta HRMS or an Helixta affiliate company. All  rights reserved. Helixta and other Helixta products and services  mentioned herein are trademarks or registered trademarks of Helixta HRMS in India and other countries.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </footer> -->
+
+            <!--end footer-->
+        </div>
+        <!-- end page content -->
+
+    <!-- end page-wrapper -->
+
+    <!-- Javascript  -->
+    <!-- vendor js -->
+    
+    <script src="assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/libs/simplebar/simplebar.min.js"></script>
+
+    <script src="assets/libs/apexcharts/apexcharts.min.js"></script>
+    <script src="https://apexcharts.com/samples/assets/irregular-data-series.js"></script>
+    <script src="assets/js/pages/index.init.js"></script>
+    <script src="assets/js/DynamicSelect.js"></script>
+    <script src="assets/js/app.js"></script>
+
+    <script>
+  function initListGridToggle(listBtnId, gridBtnId, containerId) {
+    const listBtn = document.getElementById(listBtnId);
+    const gridBtn = document.getElementById(gridBtnId);
+    const cards = document.querySelectorAll(`#${containerId} > div`);
+
+    function smoothToggle(action) {
+      cards.forEach(card => {
+        // Fade out
+        card.classList.add('fade-transition');
+
+        // Wait for fade-out before switching layout
+        setTimeout(() => {
+          if (action === 'list') {
+            card.classList.remove('col-6');
+            card.classList.add('col-12');
+          } else {
+            card.classList.remove('col-12');
+            card.classList.add('col-6');
+          }
+
+          // Fade back in
+          requestAnimationFrame(() => {
+            card.classList.remove('fade-transition');
+          });
+        }, 150); // slightly shorter than CSS duration
+      });
+    }
+
+    // List View
+    listBtn.addEventListener('click', () => {
+      smoothToggle('list');
+      listBtn.classList.add('active');
+      gridBtn.classList.remove('active');
+    });
+
+    // Grid View
+    gridBtn.addEventListener('click', () => {
+      smoothToggle('grid');
+      gridBtn.classList.add('active');
+      listBtn.classList.remove('active');
+    });
+  }
+
+  // Initialize both toggles
+  initListGridToggle('listViewBtn', 'gridViewBtn', 'productContainer');
+  initListGridToggle('listViewBtnNew', 'gridViewBtnNew', 'productContainerNew');
+</script>
+
+</body>
+<!--end body-->
+
+</html>
+
+
+{% endblock %}

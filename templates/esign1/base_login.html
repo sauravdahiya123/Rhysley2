@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en" dir="ltr" data-startbar="dark" data-bs-theme="dark">
+<head>
+  
+  {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta content="" name="description" />
+    <meta content="" name="author" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>{% block title %}My Django App{% endblock %}</title>
+    <!-- App favicon -->
+    <link rel="shortcut icon" href="{% static 'assets/images/favicon.png' %}">
+    <!-- App css -->
+    <link href="{% static 'assets/css/bootstrap.min.css' %}" rel="stylesheet" type="text/css" />
+    <link href="{% static 'assets/css/icons.min.css' %}" rel="stylesheet" type="text/css" />
+    <link href="{% static 'assets/css/app.min.css' %}" rel="stylesheet" type="text/css" />
+    <link href="{% static 'assets/css/custom-styles.css' %}" rel="stylesheet" type="text/css" />
+
+</head>
+<body>
+
+  <!-- Top Bar Start -->
+   
+    <!-- Top Bar End -->
+    <!-- leftbar-tab-menu -->
+  
+    <!-- end leftbar-tab-menu-->
+
+<div class="page-wrapper">
+  <!-- Page Content-->
+  <div class="page-content ms-0 mt-0 pb-0" >
+
+  <!-- Navbar (Fixed) -->
+
+  <!-- Content -->
+  <div class="mt-0">
+    {% block content %}{% endblock %}
+  </div>
+          
+        
+            <!--end footer-->
+        </div>
+        <!-- end page content -->
+    </div>
+    <!-- end page-wrapper -->
+
+  <!-- Javascript  -->
+    <!-- vendor js -->
+    
+    <script src="{% static 'assets/libs/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+    <script src="{% static 'assets/libs/simplebar/simplebar.min.js' %}"></script>
+    <script src="{% static 'assets/libs/quill/quill.js' %}"></script>
+    <script src="{% static 'assets/js/DynamicSelect.js' %}"></script>
+    <script src="{% static 'assets/js/app.js' %}"></script>
+
+    <script>
+      const addRecipientBtn = document.getElementById('addRecipientBtn');
+      const emailContainer = document.getElementById('emailContainer');
+
+      addRecipientBtn.addEventListener('click', () => {
+        // Create a wrapper div
+        const newInputGroup = document.createElement('div');
+        newInputGroup.classList.add('input-group', 'mb-2');
+
+        // Create the input
+        const newInput = document.createElement('input');
+        newInput.type = 'email';
+        newInput.name = 'recipients[]';
+        newInput.placeholder = 'Enter email';
+        newInput.classList.add('form-control', 'py-2');
+
+        // Create remove button
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.classList.add('btn', 'btn-danger');
+        removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+
+        // Remove field on click
+        removeBtn.addEventListener('click', () => {
+          newInputGroup.remove();
+        });
+
+        // Assemble
+        newInputGroup.appendChild(newInput);
+        newInputGroup.appendChild(removeBtn);
+
+        // Add to container
+        emailContainer.appendChild(newInputGroup);
+      });
+
+      // Document with Order
+
+      const addRecipientOrderBtn = document.getElementById('addRecipientOrderBtn');
+  const recipientRowsContainer = document.getElementById('recipientRowsContainer');
+
+  // Function to attach remove button logic
+  function attachRemoveListener(button) {
+    button.addEventListener('click', (e) => {
+      const row = e.target.closest('.recipient-row');
+      const totalRows = recipientRowsContainer.querySelectorAll('.recipient-row').length;
+
+      if (totalRows > 1) {
+        row.remove();
+      } else {
+        alert("At least one recipient row must remain.");
+      }
+    });
+  }
+
+  // Attach remove listener to initial row
+  document.querySelectorAll('.remove-recipient').forEach(btn => attachRemoveListener(btn));
+
+  // Add new recipient row
+  addRecipientOrderBtn.addEventListener('click', () => {
+    const originalRow = document.querySelector('.recipient-row');
+    const newRow = originalRow.cloneNode(true);
+
+    // Clear input values
+    newRow.querySelectorAll('input').forEach(input => input.value = '');
+
+    // Attach remove listener
+    attachRemoveListener(newRow.querySelector('.remove-recipient'));
+
+    // Append to container
+    recipientRowsContainer.appendChild(newRow);
+  });
+    </script>
+
+</body>
+<!--end body-->
+</html>

@@ -1,0 +1,765 @@
+{% extends 'esign/base.html' %}
+{% block content %}
+{% load widget_tweaks %}
+
+
+<body>
+
+
+    <div class="page-wrapper">
+
+        <!-- Page Content-->
+        <!-- <div class="page-content"> -->
+            <div class="container-fluid">
+                <div class="row">
+                    <div class="col-sm-12">
+                        <div class="page-title-box pt-md-0 pb-2">
+                           
+                            <div>
+                                <h4 class="page-title mb-1">Quick Actions</h4>
+                                <!-- <p class="text-muted mb-0 fw-normal fs-12">Streamline your document workflow with our comprehensive software</p> -->
+                            </div>
+                        </div><!--end page-title-box-->
+                    </div><!--end col-->
+                </div><!--end row-->
+             
+                <div class="row justify-content-center">
+                    
+                        
+    <!-- Sidebar Buttons -->
+    <div class="col-md-12 col-lg-3">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title mb-1">Upload Document</h4>  
+                      <p class="text-muted small mb-3">* Maximum file size allowed: 15 MB (PDF only)</p>
+            </div>
+           <div class="card-body pt-0">
+
+  <label for="fileQuick" class="btn btn-outline-secondary text-start w-100 mb-2">
+      <i class="fas fa-clock me-2"></i> Quick Access
+  </label>
+  <input type="file" id="fileQuick" class="visually-hidden" accept="application/pdf">
+
+  <label for="fileTemplates" class="btn btn-outline-secondary text-start w-100 mb-2">
+      <i class="fas fa-columns me-2"></i> My Templates
+  </label>
+  <input type="file" id="fileTemplates" class="visually-hidden" accept="application/pdf">
+
+  <label for="fileShared" class="btn btn-outline-secondary text-start w-100 mb-2">
+      <i class="fas fa-user me-2"></i> Shared with me
+  </label>
+  <input type="file" id="fileShared" class="visually-hidden" accept="application/pdf">
+
+  <label for="fileLocal" class="btn btn-outline-secondary text-start w-100 mb-2">
+      <i class="fas fa-upload me-2"></i> Local file
+  </label>
+  <input type="file" id="fileLocal" class="visually-hidden" accept="application/pdf">
+
+
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+
+<!-- <script>
+document.querySelectorAll('input[type="file"]').forEach(input => {
+  input.addEventListener('change', async function () {
+    const file = this.files[0];
+    if (!file) return;
+
+    // ✅ Step 1: Check file type (only PDF)
+    const isPDF = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    if (!isPDF) {
+      alert('⚠️ Only PDF files are allowed!');
+      this.value = ''; // reset input
+      return;
+    }
+
+    try {
+      // ✅ Step 2: Read file and check page count
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const pages = pdf.numPages;
+
+      if (pages > 1000) {
+        alert(`❌ This PDF has ${pages} pages.\nOnly PDFs up to 1000 pages are allowed.`);
+        this.value = ''; // reset input (reject)
+        return;
+      }
+
+      // ✅ Step 3: Allow valid file (if needed, handle upload here)
+      console.log(`✅ PDF accepted with ${pages} pages.`);
+    } catch (err) {
+      console.error('Error reading PDF:', err);
+      alert('⚠️ Invalid PDF file!');
+      this.value = '';
+    }
+  });
+});
+</script> -->
+            <script>
+               
+
+document.addEventListener("DOMContentLoaded", function () {
+    const maxSizeMB = 15;
+    const maxSizeBytes = maxSizeMB * 1024 * 1024;
+
+    // All file inputs
+    const fileInputs = document.querySelectorAll('#fileQuick, #fileTemplates, #fileShared, #fileLocal');
+
+    fileInputs.forEach(input => {
+        input.addEventListener('change', function (event) {
+            const file = event.target.files[0];
+            if (file && file.size > maxSizeBytes) {
+                alert(`❌ File "${file.name}" exceeds the maximum allowed size of ${maxSizeMB} MB.`);
+                event.target.value = ''; // Clear the invalid file
+            }
+        });
+    });
+});
+</script>
+        </div>
+    </div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('uploadForm');
+    const fileInput = document.querySelector('input[name="{{ form.file.html_name }}"]');
+
+    form.addEventListener('submit', function(e) {
+        if (!fileInput.files.length) {  // agar file select nahi hui
+            e.preventDefault();         // form submit rok do
+            alert('Please select a file from the sidebar before uploading!');
+            fileInput.focus();          // optional: focus hidden input
+        }
+    });
+});
+</script>
+    <!-- Main Upload Form -->
+    <div class="col-md-12 col-lg-9">
+        <div class="card">
+            <!-- <div class="card-header">
+                <h4 class="card-title mb-1">Upload Document</h4>
+            </div> -->
+            <div class="card-body">
+
+<form id="uploadForm" method="post" enctype="multipart/form-data" class="row g-2 align-items-end">
+    {% csrf_token %}
+
+    <!-- Document Title -->
+<div class="col-md-4 mb-3">
+    <label for="{{ form.title.id_for_label }}" class="form-label fw-semibold">Document Title <span style="color: red;">*</span> </label>
+    {{ form.title|attr:"placeholder:Enter Document Title"|add_class:"form-control" }}
+</div>
+
+
+
+    <!-- Template Category -->
+<div class="col-md-4">
+    <div class="mb-3">
+        <label for="{{ form.category.id_for_label }}" class="form-label fw-semibold">Category <span style="color: red;">*</span></label>
+        {{ form.category|add_class:"form-select" }}
+    </div>
+</div>
+
+
+<div class="col-md-4">
+    <label>Expired Date <span style="color: red;">*</span></label>
+    <div class="mb-3">
+    <!-- Due Date -->
+<input type="date" name="valid_until" id="id_valid_until" class="form-control">
+    </div>
+</div>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const dateInput = document.getElementById("{{ form.valid_until.id_for_label }}");
+  if (dateInput) {
+    const today = new Date();
+    today.setDate(today.getDate()); // tomorrow
+    const minDate = today.toISOString().split("T")[0];
+    dateInput.setAttribute("min", minDate);
+  }
+});
+</script>
+  <div class="col-auto" style="position: relative; height: 0; overflow: hidden;">
+    {{ form.file }}
+</div>
+ <div class="mt-0">
+    <div class="d-flex justify-content-between">
+        <label class="form-label fw-semibold">Preview</label>
+    </div>
+    <div id="file-preview" class="border rounded-3 p-2 text-center text-muted" style="min-height:300px; background:#f9f9f9;">
+        No file selected
+    </div>
+</div>
+
+    <!-- Submit Button -->
+    <div class="col-12 my-3 text-end">
+        <button type="submit"  class="btn btn-success">Next <i class="fas fa-arrow-right ms-1"></i> </button>
+    </div>
+    
+    <!-- File (hidden, will be set via sidebar) -->
+ 
+</form>
+
+                <!-- Preview -->
+               
+
+            </div>
+        </div>
+</div>
+
+<!-- <script>
+document.addEventListener('DOMContentLoaded', function() {
+    const sidebarFiles = ['fileQuick', 'fileTemplates', 'fileShared', 'fileLocal'];
+    const mainFileInput = document.querySelector('input[name="{{ form.file.html_name }}"]');
+    const preview = document.getElementById('file-preview');
+    let currentFile = null; // track selected file
+
+    sidebarFiles.forEach(id => {
+        const input = document.getElementById(id);
+        input.addEventListener('change', function() {
+            if (!this.files.length) return;
+
+            // Copy file to main form input
+            mainFileInput.files = this.files;
+            currentFile = this.files[0]; // set selected file
+
+            // Preview
+            preview.innerHTML = '';
+            const fileType = currentFile.type;
+
+            if (fileType.startsWith('image/')) {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(currentFile);
+                img.classList.add('img-fluid', 'rounded');
+                img.style.maxHeight = '400px';
+                preview.appendChild(img);
+
+            } else if (fileType === 'application/pdf') {
+                // Hide toolbar, scrollbar, nav pane
+                const pdfFrame = document.createElement('iframe');
+                pdfFrame.src = URL.createObjectURL(currentFile) + '#toolbar=0&navpanes=0&scrollbar=0';
+                pdfFrame.style.width = '100%';
+                pdfFrame.style.height = '400px';
+                pdfFrame.classList.add('border', 'rounded');
+                pdfFrame.setAttribute('frameborder', '0');
+                pdfFrame.setAttribute('scrolling', 'no');
+                preview.appendChild(pdfFrame);
+
+            } else {
+                preview.textContent = "Preview not available for this file type.";
+            }
+        });
+    });
+
+    // Form validation
+    const form = document.querySelector('#uploadForm');
+    form.addEventListener('submit', function(e){
+        if(!currentFile){
+            e.preventDefault();
+            alert('Please select a file from the sidebar before uploading!');
+            return false;
+        }
+    });
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const field = document.getElementById('{{ form.valid_until.id_for_label }}');
+    if (field) field.setAttribute('required', true);
+});
+</script> -->
+<!-- Add this CDN in your page head or before script -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const sidebarFiles = ['fileQuick', 'fileTemplates', 'fileShared', 'fileLocal'];
+    const mainFileInput = document.querySelector('input[name="{{ form.file.html_name }}"]');
+    const preview = document.getElementById('file-preview');
+    let currentFile = null; // track selected file
+
+    sidebarFiles.forEach(id => {
+        const input = document.getElementById(id);
+
+        input.addEventListener('change', async function() {
+            if (!this.files.length) return;
+
+            const file = this.files[0];
+
+            // ✅ Step 1: Allow only PDF
+            const isPDF = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+            if (!isPDF) {
+                alert('⚠️ Only PDF files are allowed!');
+                this.value = '';
+                return;
+            }
+
+            try {
+                // ✅ Step 2: Check PDF page count using PDF.js
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                const pages = pdf.numPages;
+
+                if (pages > 1000) {
+                    alert(`❌ This PDF has ${pages} pages.\nOnly PDFs up to 1000 pages are allowed.`);
+                    this.value = '';
+                    return;
+                }
+
+                // ✅ Step 3: Valid PDF, proceed
+                mainFileInput.files = this.files;
+                currentFile = file;
+
+                // ✅ Step 4: Preview
+                preview.innerHTML = '';
+                const pdfFrame = document.createElement('iframe');
+                pdfFrame.src = URL.createObjectURL(file) + '#toolbar=0&navpanes=0&scrollbar=0';
+                pdfFrame.style.width = '100%';
+                pdfFrame.style.height = '400px';
+                pdfFrame.classList.add('border', 'rounded');
+                pdfFrame.setAttribute('frameborder', '0');
+                pdfFrame.setAttribute('scrolling', 'no');
+                preview.appendChild(pdfFrame);
+
+            } catch (err) {
+                console.error('Error reading PDF:', err);
+                alert('⚠️ Invalid or corrupted PDF file!');
+                this.value = '';
+            }
+        });
+    });
+
+    // ✅ Form validation (require file before submit)
+    const form = document.querySelector('#uploadForm');
+    form.addEventListener('submit', function(e){
+        if(!currentFile){
+            e.preventDefault();
+            alert('Please select a PDF file from the sidebar before uploading!');
+            return false;
+        }
+    });
+
+    // ✅ Set 'valid_until' required
+    const field = document.getElementById('{{ form.valid_until.id_for_label }}');
+    if (field) field.setAttribute('required', true);
+});
+</script>
+
+
+
+                    <div class="col-md-12 col-lg-12 d-none">
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="row align-items-center">
+                                    <div class="col">                      
+                                        <h4 class="card-title mb-1">Browse all Templates</h4> 
+                                        <p class="text-muted mb-0 fw-normal fs-12">Pending work that user needs to take action on</p>                     
+                                    </div><!--end col-->
+                                    <div class="col-auto">
+                                        <button type="button" class="btn btn-sm btn-outline-primary me-2"><i class="fas fa-plus me-1"></i> Create Template</button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary"><i class="fas fa-download me-1"></i> Import Template</button>
+                                    </div>
+                                </div>  <!--end row-->                                  
+                            </div><!--end card-header-->
+                            <div class="card-body pt-0">
+                                <form class="row align-items-center mb-4">
+                                    <div class="col-auto">
+                                      <label class="form-label visually-hidden" for="inlineFormInputGroupUsername">Search Documents</label>
+                                      <div class="input-group">
+                                        <button class="btn btn-secondary" type="button" id="button-addon1"><i class="fas fa-search"></i></button>
+                                        <input type="text" class="form-control" placeholder="Search Documents" aria-label="Search Documents" id="inlineFormInputGroupUsername" aria-describedby="button-addon1">
+                                    </div>
+                                    </div>
+                                    
+                                    <div class="col-auto">
+                                      <label class="form-label visually-hidden" for="inlineFormSelectTypes">All Types</label>
+                                      <select class="form-select" id="inlineFormSelectTypes">
+                                        <option selected="">All Types</option>
+                                        <option value="PDF">PDF</option>
+                                        <option value="Word">Word</option>
+                                        <option value="Excel">Excel</option>
+                                        <option value="Image">Image</option>
+                                        <option value="Others">Others</option>
+                                      </select>
+                                    </div>
+
+                                    <div class="col-auto">
+                                      <label class="form-label visually-hidden" for="inlineFormSelectStatuses">All Statuses</label>
+                                      <select class="form-select" id="inlineFormSelectStatuses">
+                                        <option selected="">All Statuses</option>
+                                        <option value="Draft">Draft</option>
+                                        <option value="Sent">Sent</option>
+                                        <option value="In Review">In Review</option>
+                                        <option value="Signed">Signed</option>
+                                        <option value="Pending">Pending</option>
+                                        <option value="Declined">Declined</option>
+                                        <option value="Expired">Expired</option>
+                                        <option value="Cancelled">Cancelled</option>
+                                      </select>
+                                    </div>
+
+                                    <div class="col-2">
+                                      <label class="form-label visually-hidden" for="inputDocumentCategory">Document Category</label>
+                                      <select class="form-select" id="inputDocumentCategory" aria-label="Document Category Select">
+                                        <option selected="">Document Category</option>
+                                        <option value="1">Finance</option>
+                                        <option value="2">Policy Update</option>
+                                        <option value="3">NDA</option>
+                                        <option value="4">Contract</option>
+                                        <option value="5">Agreement</option>
+                                        <option value="6">Invoice</option>
+                                        <option value="7">Proposal</option>
+                                        <option value="8">Purchase Order</option>
+                                        <option value="9">Template</option>
+                                      </select>
+                                    </div>
+
+                                    <div class="col-2">
+                                      <label class="form-label visually-hidden" for="inlineFormSelectTypes">Signers</label>
+                                      <select class="form-select" id="inlineFormSelectTypes">
+                                        <option selected>Signers</option>
+                                        <option value="Assigned to Me">Assigned to Me</option>
+                                        <option value="Assigned to Others">Assigned to Others</option>
+                                        <option value="By Specific User">By Specific User</option>
+                                      </select>
+                                    </div>
+                                  
+                                    <div class="col-2">
+                                      <label class="form-label visually-hidden" for="">Due Date</label>
+                                      <input class="form-control datepicker-input" placeholder="Please Select Date" type="text" name="boo">
+                                    </div>
+                                </form>
+
+                                <!-- Toggle Buttons -->
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div class="boot-view-changer d-flex justify-content-start align-items-center">
+                                    <p class="mb-0 me-3">View</p>
+                                    <div class="btn-group" aria-label="View toggle" role="group">
+                                        <button type="button" id="gridViewBtnNew" class="btn btn-outline-primary btn-sm active lh-1"><i class="iconoir-view-grid fs-4"></i></button>
+                                        <button type="button" id="listViewBtnNew" class="btn btn-outline-primary btn-sm lh-1"><i class="iconoir-task-list fs-4"></i></button>
+                                        
+                                    </div>
+                                </div>
+                                <div class="total-items-counter">
+                                    <p class="mb-0">80 Templates Found</p>
+                                </div>
+                              </div>
+
+                              <!-- Product Cards -->
+                              <div class="row" id="productContainerNew">
+                                <div class="col-3">
+                                  <div class="card">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="doc-icon rounded-circle border-secondary border-dashed thumb-xl">
+                                                <i class="fas fa-briefcase fs-22 align-self-center mb-0 text-secondary"></i>
+                                            </div>
+                                            <button class="btn btn-outline-primary"><i class="fas fa-eye"></i></button>    
+                                        </div>
+                                        <h5 class="fw-semibold mt-3 fs-16">Employment Contract</h5>
+                                        <p class="text-muted mb-0 fw-normal fs-12">Standard employment agreement template with customizable fields</p>
+                                        <div class="d-flex justify-content-between my-2 align-items-center">
+                                            <p class="mb-0 fs-10 bg-secondary-subtle text-dark px-2 py-1 rounded-pill">HR Documents</p>
+                                            <p class="text-muted mb-0 fs-10">Used: 15 Times</p>
+                                        </div>
+                                        <button class="btn btn-success w-100 mt-2">Use This Template</button>
+                                    </div><!--end card-body--> 
+                                </div>
+                                </div>
+                                <div class="col-3">
+                                  <div class="card">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="doc-icon rounded-circle border-secondary border-dashed thumb-xl">
+                                                <i class="fas fa-briefcase fs-22 align-self-center mb-0 text-secondary"></i>
+                                            </div>
+                                            <button class="btn btn-outline-primary"><i class="fas fa-eye"></i></button>    
+                                        </div>
+                                        <h5 class="fw-semibold mt-3 fs-16">Employment Contract</h5>
+                                        <p class="text-muted mb-0 fw-normal fs-12">Standard employment agreement template with customizable fields</p>
+                                        <div class="d-flex justify-content-between my-2 align-items-center">
+                                            <p class="mb-0 fs-10 bg-secondary-subtle text-dark px-2 py-1 rounded-pill">HR Documents</p>
+                                            <p class="text-muted mb-0 fs-10">Used: 15 Times</p>
+                                        </div>
+                                        <button class="btn btn-success w-100 mt-2">Use This Template</button>
+                                    </div><!--end card-body--> 
+                                </div>
+                                </div>
+                                <div class="col-3">
+                                  <div class="card">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="doc-icon rounded-circle border-secondary border-dashed thumb-xl">
+                                                <i class="fas fa-briefcase fs-22 align-self-center mb-0 text-secondary"></i>
+                                            </div>
+                                            <button class="btn btn-outline-primary"><i class="fas fa-eye"></i></button>    
+                                        </div>
+                                        <h5 class="fw-semibold mt-3 fs-16">Employment Contract</h5>
+                                        <p class="text-muted mb-0 fw-normal fs-12">Standard employment agreement template with customizable fields</p>
+                                        <div class="d-flex justify-content-between my-2 align-items-center">
+                                            <p class="mb-0 fs-10 bg-secondary-subtle text-dark px-2 py-1 rounded-pill">HR Documents</p>
+                                            <p class="text-muted mb-0 fs-10">Used: 15 Times</p>
+                                        </div>
+                                        <button class="btn btn-success w-100 mt-2">Use This Template</button>
+                                    </div><!--end card-body--> 
+                                </div>
+                                </div>
+                                <div class="col-3">
+                                  <div class="card">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="doc-icon rounded-circle border-secondary border-dashed thumb-xl">
+                                                <i class="fas fa-briefcase fs-22 align-self-center mb-0 text-secondary"></i>
+                                            </div>
+                                            <button class="btn btn-outline-primary"><i class="fas fa-eye"></i></button>    
+                                        </div>
+                                        <h5 class="fw-semibold mt-3 fs-16">Employment Contract</h5>
+                                        <p class="text-muted mb-0 fw-normal fs-12">Standard employment agreement template with customizable fields</p>
+                                        <div class="d-flex justify-content-between my-2 align-items-center">
+                                            <p class="mb-0 fs-10 bg-secondary-subtle text-dark px-2 py-1 rounded-pill">HR Documents</p>
+                                            <p class="text-muted mb-0 fs-10">Used: 15 Times</p>
+                                        </div>
+                                        <button class="btn btn-success w-100 mt-2">Use This Template</button>
+                                    </div><!--end card-body--> 
+                                </div>
+                                </div>
+                                <div class="col-3">
+                                  <div class="card">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="doc-icon rounded-circle border-secondary border-dashed thumb-xl">
+                                                <i class="fas fa-briefcase fs-22 align-self-center mb-0 text-secondary"></i>
+                                            </div>
+                                            <button class="btn btn-outline-primary"><i class="fas fa-eye"></i></button>    
+                                        </div>
+                                        <h5 class="fw-semibold mt-3 fs-16">Employment Contract</h5>
+                                        <p class="text-muted mb-0 fw-normal fs-12">Standard employment agreement template with customizable fields</p>
+                                        <div class="d-flex justify-content-between my-2 align-items-center">
+                                            <p class="mb-0 fs-10 bg-secondary-subtle text-dark px-2 py-1 rounded-pill">HR Documents</p>
+                                            <p class="text-muted mb-0 fs-10">Used: 15 Times</p>
+                                        </div>
+                                        <button class="btn btn-success w-100 mt-2">Use This Template</button>
+                                    </div><!--end card-body--> 
+                                </div>
+                                </div>
+                                <div class="col-3">
+                                  <div class="card">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="doc-icon rounded-circle border-secondary border-dashed thumb-xl">
+                                                <i class="fas fa-briefcase fs-22 align-self-center mb-0 text-secondary"></i>
+                                            </div>
+                                            <button class="btn btn-outline-primary"><i class="fas fa-eye"></i></button>    
+                                        </div>
+                                        <h5 class="fw-semibold mt-3 fs-16">Employment Contract</h5>
+                                        <p class="text-muted mb-0 fw-normal fs-12">Standard employment agreement template with customizable fields</p>
+                                        <div class="d-flex justify-content-between my-2 align-items-center">
+                                            <p class="mb-0 fs-10 bg-secondary-subtle text-dark px-2 py-1 rounded-pill">HR Documents</p>
+                                            <p class="text-muted mb-0 fs-10">Used: 15 Times</p>
+                                        </div>
+                                        <button class="btn btn-success w-100 mt-2">Use This Template</button>
+                                    </div><!--end card-body--> 
+                                </div>
+                                </div>
+                                <div class="col-3">
+                                  <div class="card">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="doc-icon rounded-circle border-secondary border-dashed thumb-xl">
+                                                <i class="fas fa-briefcase fs-22 align-self-center mb-0 text-secondary"></i>
+                                            </div>
+                                            <button class="btn btn-outline-primary"><i class="fas fa-eye"></i></button>    
+                                        </div>
+                                        <h5 class="fw-semibold mt-3 fs-16">Employment Contract</h5>
+                                        <p class="text-muted mb-0 fw-normal fs-12">Standard employment agreement template with customizable fields</p>
+                                        <div class="d-flex justify-content-between my-2 align-items-center">
+                                            <p class="mb-0 fs-10 bg-secondary-subtle text-dark px-2 py-1 rounded-pill">HR Documents</p>
+                                            <p class="text-muted mb-0 fs-10">Used: 15 Times</p>
+                                        </div>
+                                        <button class="btn btn-success w-100 mt-2">Use This Template</button>
+                                    </div><!--end card-body--> 
+                                </div>
+                                </div>
+                                <div class="col-3">
+                                  <div class="card">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="doc-icon rounded-circle border-secondary border-dashed thumb-xl">
+                                                <i class="fas fa-briefcase fs-22 align-self-center mb-0 text-secondary"></i>
+                                            </div>
+                                            <button class="btn btn-outline-primary"><i class="fas fa-eye"></i></button>    
+                                        </div>
+                                        <h5 class="fw-semibold mt-3 fs-16">Employment Contract</h5>
+                                        <p class="text-muted mb-0 fw-normal fs-12">Standard employment agreement template with customizable fields</p>
+                                        <div class="d-flex justify-content-between my-2 align-items-center">
+                                            <p class="mb-0 fs-10 bg-secondary-subtle text-dark px-2 py-1 rounded-pill">HR Documents</p>
+                                            <p class="text-muted mb-0 fs-10">Used: 15 Times</p>
+                                        </div>
+                                        <button class="btn btn-success w-100 mt-2">Use This Template</button>
+                                    </div><!--end card-body--> 
+                                </div>
+                                </div>
+                              </div>                       
+                            </div>
+
+                            <!--end card-body-->
+                        </div>
+                        <!--end card-->
+                    </div>
+                    <!--end col-->
+                </div><!--end row-->
+            </div><!-- container -->
+
+        </div>
+        <!-- end page content -->
+  
+    <!-- end page-wrapper -->
+
+    <!-- Javascript  -->
+    <!-- vendor js -->
+    
+    <script src="assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/libs/simplebar/simplebar.min.js"></script>
+    <script src="assets/libs/uppy/uppy.legacy.min.js"></script>
+    <script src="assets/js/pages/file-upload.init.js"></script>
+    <script src="assets/libs/vanillajs-datepicker/js/datepicker-full.min.js"></script>
+    <script src="assets/js/DynamicSelect.js"></script>
+    <script src="assets/js/app.js"></script>
+
+    <script>
+  const listBtnNew = document.getElementById('listViewBtnNew');
+  const gridBtnNew = document.getElementById('gridViewBtnNew');
+  const cardsNew = document.querySelectorAll('#productContainerNew > div');
+
+  // Regex to match bootstrap column classes like: col-6, col-md-4, col-sm-12 etc.
+  const colClassRegex = /^col(?:-[a-z]+)?-\d+$/i;
+
+  // Helper: find a col class on element (returns the first match or null)
+  function findColClass(el) {
+    return Array.from(el.classList).find(c => colClassRegex.test(c)) || null;
+  }
+
+  // Initialize and remember each card's original grid class
+  (function initOriginalCols(cards) {
+    // Try to infer a container default grid class from any card that is NOT col-12
+    let containerDefault = null;
+    cards.forEach(card => {
+      const col = findColClass(card);
+      if (col && !/^col(?:-[a-z]+)?-12$/i.test(col)) {
+        containerDefault = containerDefault || col;
+      }
+    });
+
+    // Fallback if nothing found (choose whatever default you prefer)
+    if (!containerDefault) containerDefault = 'col-6';
+
+    // Save per-card original column in a data attribute
+    cards.forEach(card => {
+      const col = findColClass(card);
+      if (col && !/^col(?:-[a-z]+)?-12$/i.test(col)) {
+        // card already has a non-full-width col class => store it
+        card.dataset.originalCol = col;
+      } else {
+        // card is full-width (col-12) or has no col-* => assign containerDefault
+        card.dataset.originalCol = containerDefault;
+      }
+    });
+  })(cardsNew);
+
+
+  function smoothToggleNew(action) {
+    cardsNew.forEach((card, i) => {
+      // Add fade-out class to start transition
+      card.classList.add('fade-transition');
+
+      // wait a little for fade-out to be visible, then swap classes
+      setTimeout(() => {
+        // Remove any existing col-* classes (all breakpoints)
+        Array.from(card.classList).forEach(c => {
+          if (colClassRegex.test(c)) card.classList.remove(c);
+        });
+
+        if (action === 'list') {
+          // Switch to list: full width
+          card.classList.add('col-12');
+        } else {
+          // Switch to grid: restore the original column for this card
+          const original = card.dataset.originalCol || 'col-6';
+          card.classList.add(original);
+        }
+
+        // Force a frame so the browser registers the class change, then fade back in
+        requestAnimationFrame(() => {
+          card.classList.remove('fade-transition');
+        });
+      }, 140); // keep this slightly shorter than CSS transition (0.28s above)
+    });
+  }
+
+  // Wire up buttons (using 'list'/'grid' actions)
+  listBtnNew.addEventListener('click', () => {
+    smoothToggleNew('list');
+    listBtnNew.classList.add('active');
+    gridBtnNew.classList.remove('active');
+  });
+
+  gridBtnNew.addEventListener('click', () => {
+    smoothToggleNew('grid');
+    gridBtnNew.classList.add('active');
+    listBtnNew.classList.remove('active');
+  });
+
+  // Date Picker
+
+  const elem = document.querySelector('input[name="foo"]');
+  const datepicker = new Datepicker(elem, {
+    // ...options
+  }); 
+
+  const elem2 = document.querySelector('input[name="boo"]');
+  const datepicker2 = new Datepicker(elem2, {
+    // ...options
+  }); 
+
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const fileInput = document.querySelector('input[type="file"]');
+  const preview = document.getElementById('file-preview');
+
+  fileInput.addEventListener('change', function() {
+    const file = this.files[0];
+    preview.innerHTML = "";
+
+    if (!file) {
+      preview.textContent = "No file selected";
+      return;
+    }
+
+    const fileType = file.type;
+
+    if (fileType.startsWith('image/')) {
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(file);
+      img.classList.add('img-fluid', 'rounded');
+      img.style.maxHeight = '400px';
+      preview.appendChild(img);
+
+    } else if (fileType === 'application/pdf') {
+      const pdfFrame = document.createElement('iframe');
+      pdfFrame.src = URL.createObjectURL(file);
+      pdfFrame.style.width = '100%';
+      pdfFrame.style.height = '400px';
+      pdfFrame.classList.add('border', 'rounded');
+      preview.appendChild(pdfFrame);
+
+    } else {
+      preview.textContent = "Preview not available for this file type.";
+    }
+  });
+});
+</script>
+
+</body>
+<!--end body-->
+
+</html>
+{% endblock %}

@@ -1,0 +1,324 @@
+/* Smooth transition for resizing cards */
+  #productContainer > div,
+  #productContainerNew > div {
+    transition: all 0.3s ease;
+  }
+
+  /* Optional fade effect */
+  .fade-transition {
+    opacity: 0;
+  }
+  .page-wrapper .page-content{
+    padding-bottom: 124px;
+  }
+  .footer{
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+  .uppy-Dashboard-inner{
+    width: 100% !important;
+  }
+  .uppy-size--md .uppy-Dashboard-AddFiles-title{
+    font-size: 14px;
+  }
+  .round-button{
+    width: 34px;
+    height: 34px;
+    top: -6px;
+  }
+
+/* Saurav ki CSS */
+
+/* Main container */
+.container-main {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+/* Signature Sidebar */
+/*.signature-sidebar {
+    width: 200px;
+    flex-shrink: 0;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    padding: 15px;
+    height: fit-content;
+    position: sticky;
+    top: 20px;
+}
+
+/*.signature-sidebar h5 {
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: #000000ff;
+}*/
+
+.signature-template {
+    width: auto;
+    max-width: 400px;
+    height: 40px;
+    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    /*border: 2px dashed #000;
+    border-radius: 8px;
+    
+    font-weight: 600;
+    color: #000;*/
+    cursor: grab;
+    margin-bottom: 10px;
+    transition: transform 0.2s;
+}
+
+.signature-template:hover { transform: scale(1.05); }
+
+/* Different types */
+/*.signature-template[data-type="signature"] { border-color: #000; color: #000; }
+.signature-template[data-type="stamp"] { border-color: #555; color: #555; }
+.signature-template[data-type="input"] { border-color: #111; color: #111; }*/
+
+/* PDF Container */
+.pdf-container {
+    flex: 1;
+    max-height: 80vh;
+    overflow-y: auto;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+    padding: 15px;
+    position: relative;
+}
+
+/* PDF Pages */
+.pdf-page {
+    position: relative;
+    margin: 0 auto 20px;
+    background: #fdfdfd;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    overflow: hidden;
+    width: 100% !important;
+    height: auto !important;
+}
+
+canvas { display: block; width: 100%; height: auto; }
+
+/* Signature Boxes */
+.sig-box {
+    position: absolute;
+    border: 2px dashed #000;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    width: 160px;
+    height: 60px;
+    font-weight: bold;
+    transition: transform 0.2s;
+}
+
+.sig-box.dragging { opacity: 0.7; cursor: grabbing; }
+
+.resize-handle {
+    width: 10px;
+    height: 10px;
+    background: #000;
+    position: absolute;
+    right: -5px;
+    bottom: -5px;
+    cursor: se-resize;
+    border-radius: 50%;
+}
+
+.rotate-handle {
+    width: 12px;
+    height: 12px;
+    background: #007bff;
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    cursor: grab;
+    border-radius: 50%;
+}
+
+/* Info Cards */
+.card-custom {
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    background: #fff;
+    margin-top: 20px;
+}
+
+.card-custom .card-header {
+    background: linear-gradient(90deg, #000000ff, #333333ff);
+    color: #fff;
+    font-weight: 600;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+}
+.format-sidebar {
+  position: fixed;
+  top: 0;
+  right: -300px; /* hidden by default */
+  width: 300px;
+  height: 100%;
+  /*background: #fff;
+  border-left: 1px solid #ddd;
+  padding: 15px;
+  box-shadow: -2px 0 8px rgba(0,0,0,0.1);*/
+  transition: right 0.3s ease;
+  overflow-y: auto;
+  z-index: 9999;
+}
+
+.format-sidebar.active {
+  right: 0; /* slide in */
+}
+/*.signature-sidebar {
+  width: 230px;
+  background: #fff;
+  padding: 15px;
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}*/
+.signature-template {
+  /*border: 1px dashed #999;
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  text-align: center;*/
+  cursor: grab;
+  transition: 0.3s;
+  user-select: none;
+}
+.signature-template:hover {
+  background: #f8f9fa;
+  border-color: #0d6efd;
+  color: #0d6efd;
+}
+.signature-template:active {
+  cursor: grabbing;
+}
+
+.navbar { 
+  background: #000; 
+}
+.navbar-brand { 
+  font-weight: 600; 
+  letter-spacing: 0.5px; 
+}
+.btn-bw { 
+  background: #000; 
+  color: #fff; 
+  border: 1px solid #111; 
+}
+.btn-bw:hover { 
+  background: #fff; 
+  color: #000; 
+}
+.btn-outline-light:hover { 
+  background: #fff; 
+  color: #000; 
+}
+
+/* Cards & Signatures */
+
+.sig-thumb { 
+  max-width: 160px; 
+  border:1px solid #000; 
+  background:#fff; 
+  border-radius: 4px; 
+  padding: 4px; 
+}
+
+#page-selector input[type="checkbox"]{
+  position: relative;
+  top: 1px;
+  display: inline-block;
+  margin-right: 10px;
+  border-radius: .25em;
+  width: 1.3em;
+  height: 1.3em;
+  margin-top: .1em;
+  vertical-align: top;
+}
+#page-selector{
+  max-height: 160px;
+  overflow-y: auto;
+}
+.form-check-input[type=checkbox] {
+    
+}
+a .button-hightlight{
+ -webkit-transition: all 0.4s ease;
+ -moz-transition: all 0.4s ease;
+ -ms-transition: all 0.4s ease;
+ transition: all 0.4s ease;
+ --bs-card-border-color: var(--bs-border-color);
+}
+a:hover .button-hightlight{
+  border: 1px solid #FFF;
+  background-color: rgba(0, 0, 0, 1.0);
+}
+.table-responsive{
+  overflow-x: hidden;
+}
+.table-responsive table{
+  min-width: max-content;
+}
+#signature-status-nav-tab .nav-link.active{
+  --bs-bg-opacity: 1;
+    background-color: rgba(var(--bs-light-rgb), var(--bs-bg-opacity)) !important;
+    border-bottom: 1px solid rgba(var(--bs-light-rgb), var(--bs-bg-opacity)) !important;
+    color: inherit;
+}
+.vertical-line{
+  width: 1px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.2);
+}
+/* Responsive */
+@media(max-width: 992px) {
+    .container-main { flex-direction: column; }
+    .signature-sidebar { width: 100%; position: relative; top: 0; margin-bottom: 15px; }
+    .table-responsive{
+      overflow-x: auto;
+    }
+    .page-wrapper .page-content {
+      padding-bottom: 124px;
+      margin-top: 100px;
+  }
+  .nav-pills{
+    min-width: max-content;
+  }
+}
+
+
+.form-or-container{
+  position: relative;
+}
+.form-or-container::before, .form-or-container::after{
+  content: '';
+  height: 1px;
+  width: 40%;
+  background: var(--bs-border-color) !important;
+  top: 50%;
+  transform: translateY(-50%);
+  position: absolute;
+  display: block;
+}
+.form-or-container::before{
+  left: 0;
+  right: auto;
+}
+
+.form-or-container::after{
+  right: 0;
+  left: auto;
+}
