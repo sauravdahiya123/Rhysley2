@@ -33,6 +33,7 @@ urlpatterns = [
     path('thank_you/', views.thankyou, name='thank_you'),
     path('contact_us/', views.contact_us, name='contact_us'),
     path('contact/', views.contact_view, name='contact'),
+    path('buy_plain/', views.buy_plain, name='buy_plain'),
 
 
 ]

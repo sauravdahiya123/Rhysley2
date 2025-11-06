@@ -1,0 +1,169 @@
+{% extends 'esign/base.html' %}
+{% load static %}
+{% block content %}
+
+
+<body>
+        
+    {% if messages %}
+      <div class="mb-3">
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+
+
+    <div class="page-wrapper">
+
+        <!-- Page Content-->
+        <!-- <div class="page-content"> -->
+            <div class="container-fluid">
+                <!-- <div class="row">
+                    <div class="col-sm-12">
+                        <div class="page-title-box d-md-flex justify-content-md-between align-items-center">
+                            <div>
+                                <h4 class="page-title mb-1">Quick Actions</h4>
+                                <p class="text-muted mb-0 fw-normal fs-12">Streamline your document workflow with our comprehensive software</p>
+                            </div>
+                            <div class="">
+                                <ol class="breadcrumb mb-0">
+                                    <li class="breadcrumb-item"><a href="#">E-Sign</a>
+                                    </li>
+                                    <li class="breadcrumb-item active">Dashboard</li>
+                                </ol>
+                            </div>                            
+                        </div>
+                    </div>
+                    </div> -->
+                <div class="row justify-content-center">
+                <div class="col-12 text-center"><h1 class="css-k95pdt">Agreements made effortless</h1></div>
+                <div class="col-sm-6 col-md-3">
+                    <section class="pricing-plans-card rounded-4 card">
+                        <div class="pricing-plans-top text-center bg-light border-bottom p-3 rounded-4">
+                            <h3 class="">Personal</h3>
+                            <div data-id="subtitle" class="small">For individuals and sole proprietors with basic e-signature needs.</div>
+
+                            <div id="eazeeSignPersonalPlan" class="d-flex py-3 justify-content-center align-items-center">
+                                <div class="plan-value display-4 me-2 lh-1 fw-bold"><sup class="fs-14">$</sup>10</div>
+                                <div class="css-defxzi text-start">
+                                    <div class="small">/month</div>
+                                    <div class="small">$120 billed annually</div>
+                                </div>
+                            </div>
+
+                            <a aria-label="Buy Now {{name}}" role="link" href="#" data-context="plan-lineup" data-action="buy-now-annually-personal-personal" data-type="cta" data-id="PersonalPlanCard" class="btn btn-primary w-100 mb-2 py-2 fs-18" aria-disabled="false">Buy Now</a>
+                            <div class="small">Additional tax may apply</div>
+                        </div>
+                        <div class="pricing-plans-bottom p-3">
+                            <p><strong>Core benefits include:</strong></p>
+
+                            <ul class="ps-0 m-0">
+                                <li class="pb-2 d-flex"><span class="me-2 d-inline-block"><i class="far fa-envelope"></i></span> <span>Send 5 envelopes per month (up to 99 signatures per envelope)</span></li>
+                                <li class="pb-2">Securely store and access all your agreements in one place</li>
+                                <li class="pb-2">Speed up agreement completion with AI-assisted summary</li>
+                                <li class="pb-2">Save hours of manual setup with reusable templates</li>
+                                <li class="pb-2">Stay in the tools you already use with 1000+ integrations</li>
+                            </ul>
+
+                            <button class="btn btn-outline-primary w-100">See All Features</button>
+                        </div>
+                    </section>
+                </div>
+                <div class="col-sm-6 col-md-3">
+                    
+                </div>
+                <div class="col-sm-6 col-md-3">
+                    
+                </div>
+                <div class="col-sm-6 col-md-3">
+                    
+                </div>
+                <!--end col-->
+                    
+                    
+                </div><!--end row-->
+                
+            </div><!-- container -->
+
+            <!--Start Rightbar-->
+           
+            <!--end Rightbar-->
+            
+        </div>
+        <!-- end page content -->
+
+    <!-- end page-wrapper -->
+
+    <!-- Javascript  -->
+    <!-- vendor js -->
+    
+    <script src="assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/libs/simplebar/simplebar.min.js"></script>
+
+    <script src="assets/libs/apexcharts/apexcharts.min.js"></script>
+    <script src="https://apexcharts.com/samples/assets/irregular-data-series.js"></script>
+    <script src="assets/js/pages/index.init.js"></script>
+    <script src="assets/js/DynamicSelect.js"></script>
+    <script src="assets/js/app.js"></script>
+
+    <script>
+  function initListGridToggle(listBtnId, gridBtnId, containerId) {
+    const listBtn = document.getElementById(listBtnId);
+    const gridBtn = document.getElementById(gridBtnId);
+    const cards = document.querySelectorAll(`#${containerId} > div`);
+
+    function smoothToggle(action) {
+      cards.forEach(card => {
+        // Fade out
+        card.classList.add('fade-transition');
+
+        // Wait for fade-out before switching layout
+        setTimeout(() => {
+          if (action === 'list') {
+            card.classList.remove('col-6');
+            card.classList.add('col-12');
+          } else {
+            card.classList.remove('col-12');
+            card.classList.add('col-6');
+          }
+
+          // Fade back in
+          requestAnimationFrame(() => {
+            card.classList.remove('fade-transition');
+          });
+        }, 150); // slightly shorter than CSS duration
+      });
+    }
+
+    // List View
+    listBtn.addEventListener('click', () => {
+      smoothToggle('list');
+      listBtn.classList.add('active');
+      gridBtn.classList.remove('active');
+    });
+
+    // Grid View
+    gridBtn.addEventListener('click', () => {
+      smoothToggle('grid');
+      gridBtn.classList.add('active');
+      listBtn.classList.remove('active');
+    });
+  }
+
+  // Initialize both toggles
+  initListGridToggle('listViewBtn', 'gridViewBtn', 'productContainer');
+  initListGridToggle('listViewBtnNew', 'gridViewBtnNew', 'productContainerNew');
+</script>
+
+</body>
+<!--end body-->
+
+</html>
+
+
+{% endblock %}
