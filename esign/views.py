@@ -36,7 +36,8 @@ import random
 from django.contrib import auth
 from esign.utils.email_utils import get_from_email
 
-
+def check(request):
+    return redirect('')
 
 def handle_not_found(request, exception):
     # Option 1: redirect to home page
