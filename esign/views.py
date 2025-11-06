@@ -1721,3 +1721,10 @@ def index(request):
 def buy_plain(request):
     if request.method == "GET":
         return render(request,'esign/plans_pricing.html')
+
+
+def admin_view(request):
+    if request.method == "GET":
+        return render(request,'admin/admin_view.html')
+
+        
