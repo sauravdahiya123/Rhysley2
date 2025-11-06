@@ -48,7 +48,7 @@
             <div class="card rounded">
               <div class="bg-white position-relative rounded">  
                 <div class="position-absolute w-75" style="left: 60px; bottom: 30px;">
-              <div id="signaturePreview" class="fs-2 mt-2 text-black" style="font-family: 'Oooh Baby', cursive;">
+              <div id="signaturePreview" class="fs-2 mt-2 text-black fw-bold" style="font-family: 'Oooh Baby', cursive;">
 
               </div>
               <span class="small text-black d-block border-top">Signature</span>
@@ -76,7 +76,7 @@
           </div>
         </div>
         <div class="col-sm-12 col-md-6">
-          <p>Graphic Div</p>
+          <img src="{% static 'assets/images/otp-screen.jpg' %}" alt="" class="img-fluid rounded">
         </div>
       </div>
     </div>
@@ -87,7 +87,7 @@
         <h3 class="">Secure Your Account</h3>
           <p class="text-muted mb-4">To enhance the security of your account, EazeeSign needs to verify that it’s really you. Please enter your phone number to confirm your identity by SMS and we will send you a one-time 6-digit code.</p>
 
-        <div class="mb-5">
+        <div class="mb-4">
           <label class="form-label" for="userPhone">Phone <span style="color: red;"> *</span></label>
           <input type="text" name="userPhone" class="form-control" placeholder="Phone Number" required
           value="{{ request.POST.userPhone|default_if_none:'' }}">
@@ -98,7 +98,7 @@
         </div>
       </div>
       <div class="col-sm-12 col-md-6">
-        <p>Graphic Div</p>
+        <img src="{% static 'assets/images/mobile-otp.jpg' %}" alt="" class="img-fluid rounded">
       </div>
     </div>
   </div>
@@ -113,7 +113,7 @@
         <label class="form-label" for="phoneVerificationCode">Verification Code <span style="color: red;"> *</span></label>
         <input type="text" name="phoneVerificationCode" id="phoneVerificationCode" class="form-control" placeholder="6 Digit Verification Code" required value="">
       </div>
-      <!-- <p class="mb-5"><button class="btn btn-sm btn btn-outline-secondary me-2">Resend code again</button> <button class="btn btn-sm btn btn-outline-secondary">Use a different phone number</button></p> -->
+      <p class="mb-5"><button class="btn btn-sm btn btn-outline-secondary me-2">Resend code again</button> <!-- <button class="btn btn-sm btn btn-outline-secondary">Use a different phone number</button> --></p>
 
       <p class="small">By choosing to verify, you agree to the <a href="/terms_of_service" class="d-inline-block">Terms of Service</a> and <a href="/privacy_policy" class="d-inline-block">Privacy Policy</a>.</p>
       <div class="text-center mt-3">
@@ -121,7 +121,7 @@
       </div>
     </div>
     <div class="col-sm-12 col-md-6">
-      <p>Graphic Div</p>
+      <img src="{% static 'assets/images/mobile-otp.jpg' %}" alt="" class="img-fluid rounded">
     </div>
   </div>
 </div>
@@ -151,7 +151,14 @@
     </div>
   </div>
   <div class="col-sm-12 col-md-6">
-    <p>Graphic Div</p>
+    <div class="card rounded">
+        <div class="bg-white position-relative rounded">  
+          <div class="position-absolute w-75" style="left: 60px; bottom: 30px;">
+          <span class="small text-black d-block border-top">Signature</span>
+        </div>
+          <img src="{% static 'assets/images/sign-sample.jpg' %}" alt="" class="img-fluid rounded">
+        </div>
+      </div>
   </div>
 </div>
 </div>
