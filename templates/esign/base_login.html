@@ -11,6 +11,9 @@
     <title>{% block title %}My Django App{% endblock %}</title>
     <!-- App favicon -->
     <link rel="shortcut icon" href="{% static 'assets/images/favicon.png' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Oooh+Baby&display=swap" rel="stylesheet">
     <!-- App css -->
     <link href="{% static 'assets/css/bootstrap.min.css' %}" rel="stylesheet" type="text/css" />
     <link href="{% static 'assets/css/icons.min.css' %}" rel="stylesheet" type="text/css" />
@@ -100,8 +103,6 @@
     
     <script src="{% static 'assets/libs/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
     <script src="{% static 'assets/libs/simplebar/simplebar.min.js' %}"></script>
-    <script src="{% static 'assets/libs/quill/quill.js' %}"></script>
-    <script src="{% static 'assets/js/DynamicSelect.js' %}"></script>
     <script src="{% static 'assets/js/app.js' %}"></script>
 
     <script>
@@ -176,6 +177,46 @@
     recipientRowsContainer.appendChild(newRow);
   });
     </script>
+
+
+<!-- Multi step signup form process -->
+<script>
+  const steps = document.querySelectorAll(".step");
+  let currentStep = 0;
+
+  const firstNameInput = document.getElementById("username");
+  const lastNameInput = document.getElementById("userLastName");
+  const signaturePreview = document.getElementById("signaturePreview");
+
+  // ✅ Update signature in real time
+  function updateSignature() {
+    signaturePreview.textContent = `${firstNameInput.value} ${lastNameInput.value}`.trim();
+  }
+
+  firstNameInput.addEventListener("input", updateSignature);
+  lastNameInput.addEventListener("input", updateSignature);
+
+  // ✅ Step Navigation with validation
+  function goToStep(stepIndex) {
+    const inputs = steps[currentStep].querySelectorAll("input");
+    for (let input of inputs) {
+      if (!input.checkValidity()) {
+        input.reportValidity();
+        return;
+      }
+    }
+
+    steps[currentStep].classList.add("d-none");
+    currentStep = stepIndex;
+    steps[currentStep].classList.remove("d-none");
+  }
+
+  // ✅ Handle form submit
+  document.getElementById("signupForm").addEventListener("submit", function(e) {
+    e.preventDefault();
+    alert("Form submitted successfully!");
+  });
+</script>
 
 </body>
 <!--end body-->

@@ -55,6 +55,9 @@ def terms_of_service(request):
 def cookie_settings(request):
     return render(request, 'esign/cookie_settings.html')    
 
+def signup_steps(request):
+    return render(request, 'esign/signup_steps.html')    
+
 
 @login_required
 def generate_pdf_with_boxes(document):
