@@ -58,6 +58,12 @@ def cookie_settings(request):
 def signup_steps(request):
     return render(request, 'esign/signup_steps.html')    
 
+def forgot_password(request):
+    return render(request, 'esign/forgot_password.html')    
+
+def change_password(request):
+    return render(request, 'esign/change_password.html')    
+
 
 @login_required
 def generate_pdf_with_boxes(document):

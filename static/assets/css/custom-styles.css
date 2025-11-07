@@ -28,7 +28,10 @@
   }
 
 /* Saurav ki CSS */
-
+.login-icon-box{
+  width: 60px;
+  height: 60px;
+}
 /* Main container */
 .container-main {
     display: flex;
