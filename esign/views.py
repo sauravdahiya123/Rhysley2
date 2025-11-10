@@ -67,6 +67,9 @@ def change_password(request):
 def otp_email(request):
     return render(request, 'esign/otp_email.html')    
 
+def password_email(request):
+    return render(request, 'esign/password_email.html')    
+
 
 @login_required
 def generate_pdf_with_boxes(document):
