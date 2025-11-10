@@ -2,12 +2,179 @@
 {% load static %}
 {% block content %}
 
-<div class="d-flex justify-content-center align-items-center mt-4">
+
+<!-- Hidden preheader text -->
+  <div style="display: none; max-height: 0px; overflow: hidden; mso-hide: all;">
+    Use this code to verify your account — expires in {{EXPIRY_MINUTES}} minutes.
+  </div>
+  <!-- Preheader spacer -->
+  <div style="display: none; max-height: 0px; overflow: hidden; mso-hide: all;">
+    &nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;
+  </div>
+
+  <!-- Outer wrapper -->
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin: 0; padding: 0; background-color: #f3f4f6; border: 0; border: none;">
+    <tr style="border: 0; border: none;">
+      <td align="center" style="padding: 24px 10px; border: 0; border: none;">
+        
+        <!-- Main container -->
+        <!--[if mso | IE]>
+        <table width="600" align="center" cellpadding="0" cellspacing="0" border="0" style="width: 600px; border: 0;">
+          <tr style="border: 0;">
+            <td style="border: 0;">
+        <![endif]-->
+        
+        <table class="container" width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="max-width: 600px; background-color: #ffffff; margin: 0 auto; border: 0; border: none;">
+          
+          <!-- Header -->
+          <tr style="border: 0; border: none;">
+            <td style="background-color: #0f172a; padding: 24px 28px; border: 0; border: none; mso-padding-alt: 24px 28px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="border: 0; border: none;">
+                <tr style="border: 0; border: none;">
+                  <td width="50%" valign="middle" style="padding: 0; border: 0; border: none;">
+                    <img src="{% static 'assets/images/footer-logo-small.png' %}" alt="logo-large" class="logo-lg logo-light" style="height: 36px;">
+                  </td>
+                  <td width="50%" valign="middle" align="right" class="mobile-center" style="color: #ffffff; font-size: 12px; opacity: 0.8; padding: 0; border: 0; border: none;">
+                    Security Notice
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr style="border: 0; border: none;">
+            <td class="mobile-padding" style="padding: 32px 28px; border: 0; border: none;">
+              
+              <!-- Title -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="border: 0; border: none;">
+                <tr style="border: 0; border: none;">
+                  <td style="font-size: 20px; font-weight: 600; color: #0f172a; padding: 0 0 12px 0; line-height: 1.3; border: 0; border: none;">
+                    Your One-Time Password (OTP)
+                  </td>
+                </tr>
+                
+                <!-- Description -->
+                <tr style="border: 0; border: none;">
+                  <td style="font-size: 16px; color: #374151; padding: 0 0 24px 0; line-height: 1.6; border: 0; border: none;">
+                    Use the one-time code below to verify your account. This code expires in <strong style="color: #0f172a;">10 minutes</strong>.
+                  </td>
+                </tr>
+
+                <!-- OTP Box -->
+                <tr style="border: 0; border: none;">
+                  <td align="center" style="padding: 0 0 28px 0; border: 0; border: none;">
+                    <!--[if mso | IE]>
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border: 0;">
+                      <tr style="border: 0;">
+                        <td align="center" style="background-color: #f8fafc; border: 2px solid #e5e7eb; padding: 20px 32px;">
+                          <span style="font-family: 'Courier New', Courier, monospace; font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #0f172a;">
+                            {{OTP}}
+                          </span>
+                        </td>
+                      </tr>
+                    </table>
+                    <![endif]-->
+                    <!--[if !mso]><!-->
+                    <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin: 0 auto; border: 0; border: none;">
+                      <tr style="border: 0; border: none;">
+                        <td align="center" style="background-color: #f8fafc; border: 2px solid #e5e7eb; border-radius: 8px; padding: 20px 32px;">
+                          <span class="otp-text" style="font-family: 'Courier New', Courier, monospace; font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #0f172a; display: inline-block;">
+                            123456
+                          </span>
+                        </td>
+                      </tr>
+                    </table>
+                    <!--<![endif]-->
+                  </td>
+                </tr>
+
+                <!-- Verify Button -->
+                <tr style="border: 0; border: none;">
+                  <td align="center" style="padding: 0 0 28px 0; border: 0; border: none;">
+                    <!--[if mso]>
+                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{{ACTION_URL}}" style="height: 48px; v-text-anchor: middle; width: 220px;" arcsize="13%" strokecolor="#2563eb" fillcolor="#2563eb">
+                      <w:anchorlock/>
+                      <center style="color: #ffffff; font-family: Arial, sans-serif; font-size: 16px; font-weight: bold;">
+                        Verify Account
+                      </center>
+                    </v:roundrect>
+                    <![endif]-->
+                    <!--[if !mso]><!-->
+                    <table width="100%" align="center" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td width="30%" height="50"></td>
+                        <td width="40%" style="background-color: #2563eb; color: #ffffff; text-align: center;">
+                          <a href="#" class="button-link" style="background-color: #2563eb; color: #ffffff; font-size: 16px; font-weight: 600; text-align: center; text-decoration: none; display: block; padding: 14px 40px; mso-padding-alt: 0; line-height: 1.3; border: 0; height: 50px;">
+                      <!--[if mso]><i style="letter-spacing: 25px; mso-font-width: -100%; mso-text-raise: 30pt;">&nbsp;</i><![endif]-->
+                      <span style="mso-text-raise: 15pt;">Verify Account</span>
+                      <!--[if mso]><i style="letter-spacing: 25px; mso-font-width: -100%;">&nbsp;</i><![endif]-->
+                    </a>
+                    <!--<![endif]-->
+                        </td>
+                        <td width="30%"></td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Info Text -->
+                <tr style="border: 0; border: none;">
+                  <td style="font-size: 14px; color: #6b7280; line-height: 1.7; padding: 0 0 16px 0; border: 0; border: none;">
+                    If you didn't request this code, you can safely ignore this email. For your security, do not share this code with anyone.
+                  </td>
+                </tr>
+
+                <!-- Support -->
+                <tr style="border: 0; border: none;">
+                  <td style="font-size: 13px; color: #9ca3af; line-height: 1.5; padding: 0; border: 0; border: none;">
+                    Need help?  <a href="#" style="color: #2563eb; text-decoration: none;">Contact Us</a>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr style="border: 0; border: none;">
+            <td align="center" style="background-color: #f8fafc; padding: 20px 28px; border-top: 1px solid #e5e7eb; border-left: 0; border-right: 0; border-bottom: 0; color: #6b7280; font-size: 13px; line-height: 1.6; mso-line-height-rule: exactly;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="border: 0; border: none;">
+                <tr style="border: 0; border: none;">
+                  <td align="center" style="padding: 0 0 8px 0; border: 0; border: none;">
+                    Copyright © EazeeSign 2025 All rights reserved.
+                  </td>
+                </tr>
+                <!-- <tr style="border: 0; border: none;">
+                  <td align="center" style="padding: 0; border: 0; border: none;">
+                    <a href="{{UNSUB_URL}}" style="color: #6b7280; text-decoration: underline;">Unsubscribe</a>
+                    <span style="color: #9ca3af; padding: 0 8px;">•</span>
+                    <a href="{{PRIVACY_URL}}" style="color: #6b7280; text-decoration: underline;">Privacy Policy</a>
+                  </td>
+                </tr> -->
+              </table>
+            </td>
+          </tr>
+
+        </table>
+        
+        <!--[if mso | IE]>
+            </td>
+          </tr>
+        </table>
+        <![endif]-->
+        
+      </td>
+    </tr>
+  </table>
+
+
+<!-- <div class="d-flex justify-content-center align-items-center mt-4">
   <div class="container-fluid">
     <div class="row">
       <div class="col-sm-12 col-md-6 offset-md-4 col-lg-4 offset-lg-4">
-        <div class="email-wrapper">
-          <div class="card">
+        <div class="email-wrapper" style="width: 495px; max-width: 600px; border: 1px solid #CCCCCC">
+          <div class="card rounded-0">
             <div class="card-header">
               <a href="/" class="logo">
                 <span class="">
@@ -43,7 +210,7 @@
       </div>
     </div>
   </div>
-</div>
+</div> -->
 
 
 
