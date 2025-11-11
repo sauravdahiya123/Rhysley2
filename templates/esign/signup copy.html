@@ -13,18 +13,7 @@
             </div>
           </div>
 
-          
-  {% if messages %}
-            {% for message in messages %}
-              {% if message.tags == 'success' %}
-                <small  id="msgg" class="text-success fw-semibold d-block text-center mb-2">{{ message }}</small>
-              {% elif message.tags == 'error' and 'Invalid OTP' not in message %}
-                <small  id="msgg" class="text-danger fw-semibold d-block text-center mb-2">{{ message }}</small>
-              {% endif %}
-            {% endfor %}
-          {% endif %}
-
-        <form method="post" action="{% url 'signup_basic' %}" id="signupForm">
+          <form method="post" id="signupForm">
             {% csrf_token %}
               <div class="row">               
                 <div class="col-sm-8 offset-sm-2">
@@ -46,12 +35,12 @@
                     <input required type="checkbox" class="form-check-input" id="userConsentCheckBox">
                     <label class="form-check-label mb-3" for="userConsentCheckBox">I agree to receive marketing communications from EazeeSign and acknowledge that I can opt out at any time by submitting contact us form.</label>
 
-                    <small>By clicking "Get Started," you agree to EazeeSign's <a href="/privacy_policy" class="d-inline-block">Privacy Policy</a> and <a href="/terms_of_service" class="d-inline-block">Terms of Service</a>.</small>
+                    <small>By clicking "Sign up," you agree to EazeeSign's <a href="/privacy_policy" class="d-inline-block px-1">Privacy Policy</a> and <a href="/terms_of_service" class="d-inline-block">Terms of Service</a>.</small>
                   </div>
                 </div>
               </div>
             <div class="text-center">
-              <button type="submit" class="btn btn-primary px-5">Get Started</button>
+              <button type="submit" class="btn btn-primary px-5">Sign up</button>
               <!-- <p class="mt-3 text-center">
                 Already have an account? <a href="{% url 'user_login' %}">Login</a>
               </p> -->

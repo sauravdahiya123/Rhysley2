@@ -2,12 +2,30 @@ from django.conf import settings
 from django.db import models
 import uuid
 from django.utils import timezone
+from django.contrib.auth.models import AbstractUser
 
 class User(models.Model):
+    # Basic info
     email = models.EmailField(unique=True)
+    phone = models.CharField(max_length=20, unique=True)
     
+    # Verification fields
+    is_email_verified = models.BooleanField(default=False)
+    is_phone_verified = models.BooleanField(default=False)
+    temp_email_code = models.CharField(max_length=6, blank=True, null=True)
+    temp_phone_code = models.CharField(max_length=6, blank=True, null=True)
     
+    # Optional fields
+    signature_font = models.CharField(max_length=255, blank=True, null=True)
+    
+    # System fields
+    is_active = models.BooleanField(default=True)
+    date_joined = models.DateTimeField(default=timezone.now)
+    
+    def __str__(self):
+        return self.email
 User = settings.AUTH_USER_MODEL
+
 
 def upload_doc_path(instance, filename):
     return f'documents/{instance.owner.id}/{uuid.uuid4().hex}_{filename}'
@@ -185,80 +203,58 @@ class MarketingSource(models.Model):
         return f"{self.user.email} - {self.source}"
 
 
-
-
-
-
+from datetime import timedelta
 
 # Company Deatils 
 # --------------------- Business / Subscription Models ---------------------
+class Subscription(models.Model):
+    PLAN_MONTHLY = 'monthly'
+    PLAN_YEARLY = 'yearly'
+    PLAN_FREE_TRIAL = 'free_trial'
 
-from django.core.validators import MinValueValidator, MaxValueValidator
-from django.utils import timezone
+    PLAN_CHOICES = (
+        (PLAN_MONTHLY, 'Monthly'),
+        (PLAN_YEARLY, 'Yearly'),
+        (PLAN_FREE_TRIAL, 'Free Trial'),
+    )
 
-class Company(models.Model):
-    user = models.OneToOneField(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.CASCADE, 
-        related_name='company_profile'
-    )  # This user represents the company account
-    name = models.CharField(max_length=255, unique=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    is_active = models.BooleanField(default=True)
-    class Meta:
-        verbose_name = "Company"
-        verbose_name_plural = "Companies"  # For sidebar
-    def __str__(self):
-        return self.name
+    STATUS_PENDING = 'pending'
+    STATUS_ACTIVE = 'active'
+    STATUS_FAILED = 'failed'
+    STATUS_CANCELED = 'canceled'
+    STATUS_CHOICES = (
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_ACTIVE, 'Active'),
+        (STATUS_FAILED, 'Failed'),
+        (STATUS_CANCELED, 'Canceled'),
+    )
 
-class CompanyMembership(models.Model):
-    ROLE_CHOICES = [('admin', 'Admin'), ('member', 'Member')]
-    
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='members')
-    role = models.CharField(max_length=50, choices=ROLE_CHOICES, default='member')
-    joined_at = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    plan = models.CharField(max_length=20, choices=PLAN_CHOICES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
 
-    class Meta:
-        unique_together = ('user', 'company')
-        verbose_name = "Company Membership"
-        verbose_name_plural = "Company Memberships"
-
-
-class SubscriptionPlan(models.Model):
-    name = models.CharField(max_length=100, unique=True)
-    price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
-    duration_days = models.PositiveIntegerField(default=30)
-    max_users = models.PositiveIntegerField(default=1)
-    max_documents = models.PositiveIntegerField(default=100)
-
-    class Meta:
-        verbose_name = "Company Subscription"
-        verbose_name_plural = "Company Subscriptions"
-
-    def __str__(self):
-        return self.name
-
-
-class CompanySubscription(models.Model):
-    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='subscriptions')
-    plan = models.ForeignKey(SubscriptionPlan, on_delete=models.SET_NULL, null=True)
     start_date = models.DateTimeField(null=True, blank=True)
     end_date = models.DateTimeField(null=True, blank=True)
-    is_active = models.BooleanField(default=True)
 
-    class Meta:
-        verbose_name = "Subscription Plan"
-        verbose_name_plural = "Subscription Plans"
+    stripe_checkout_session_id = models.CharField(max_length=255, blank=True, null=True)
+    stripe_payment_intent_id = models.CharField(max_length=255, blank=True, null=True)
+    stripe_payment_status = models.CharField(max_length=50, blank=True, null=True)
 
-    def save(self, *args, **kwargs):
-        # Set start_date if not set
-        if not self.start_date:
-            self.start_date = timezone.now()
-        
-        # Set end_date based on plan duration if not set
-        if self.plan and not self.end_date:
-            self.end_date = self.start_date + timezone.timedelta(days=self.plan.duration_days)
-        
-        super().save(*args, **kwargs)
+    amount_cents = models.PositiveIntegerField(null=True, blank=True)  # store amount in cents
+    currency = models.CharField(max_length=10, default='usd')
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def set_active(self):
+        """Activate the subscription and set start/end dates based on plan."""
+        self.status = self.STATUS_ACTIVE
+        self.start_date = timezone.now()
+        if self.plan == self.PLAN_MONTHLY:
+            self.end_date = timezone.now() + timedelta(days=30)
+        else:
+            self.end_date = timezone.now() + timedelta(days=365)
+        self.save()
+
+    def __str__(self):
+        return f"{self.user.email} - {self.plan} - {self.status}"

@@ -1,0 +1,343 @@
+{% extends "esign/base_login.html" %}
+{% block content %}
+
+<div class="d-flex justify-content-center align-items-center mt-5">
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-sm-12 col-md-6 offset-md-4 col-lg-4 offset-lg-4">
+        <div class="login-wrapper">
+          {% if messages %}
+  {% for message in messages %}
+    {% if message.tags == 'success' %}
+      <small id="msgg" class="text-success fw-semibold d-block text-center mb-2">{{ message }}</small>
+    {% elif message.tags == 'info' %}
+      <small id="msgg" class="text-info fw-semibold d-block text-center mb-2">{{ message }}</small>
+    {% elif message.tags == 'error' %}
+      <small id="msgg" class="text-danger fw-semibold d-block text-center mb-2">{{ message }}</small>
+    {% endif %}
+  {% endfor %}
+{% endif %}
+
+       
+        <p id="otpStatus" class="text-center mt-2 fw-semibold small"></p>
+
+         <form method="post" id="loginForm" onsubmit="handleLoginSubmit(event)">
+  {% csrf_token %}
+  <!-- Step 0 -->
+  <div class="login-step">
+  <div class="card p-4 shadow">
+    <div class="row">
+      <div class="col-sm-12 mb-3">
+        <div class="d-flex justify-content-between">
+          <div class="login-content-box">
+            <h3 class="">Log in to EazeeSign</h3>
+            <p class="text-muted">Enter your email to Log in.</p>
+          </div>
+          <div class="login-icon-box border rounded-circle ms-3 p-2 d-flex justify-content-center align-items-center">
+            <i class="iconoir-log-in fs-26 px-1"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Email Field -->
+    <div class="mb-3" id="emailField">
+      <label class="form-label">Email <span class="text-danger">*</span></label>
+      <input
+        type="email"
+        id="email"
+        name="email"
+        class="form-control"
+        value="{{ request.POST.email|default_if_none:'' }}"
+        placeholder="Enter your email"
+        required
+      >
+    </div>
+
+
+    </div>
+    <script>
+      document.addEventListener("DOMContentLoaded", function() {
+      const loginSteps = document.querySelectorAll(".login-step");
+      let loginCurrentStep = 0; // default first step visible
+      const loginForm = document.getElementById("loginForm");
+
+      // Hide all except first step
+      loginSteps.forEach((step, index) => {
+        if (index !== loginCurrentStep) step.classList.add("d-none");
+      });
+
+      // Function to move between steps or submit
+      window.goToLoginStep = function(stepIndex) {
+        // ✅ Validate inputs of current step
+        const fields = loginSteps[loginCurrentStep].querySelectorAll("input, select, textarea");
+        for (let field of fields) {
+          if (!field.checkValidity()) {
+            field.reportValidity();
+            return;
+          }
+        }
+
+        // ✅ Hide current step
+        loginSteps[loginCurrentStep].classList.add("d-none");
+
+        // ✅ If stepIndex >= total steps → submit
+        // if (stepIndex >= loginSteps.length) {
+          loginForm.submit();
+          // return;
+        // }
+
+        // ✅ Show next step
+        loginCurrentStep = stepIndex;
+        loginSteps[loginCurrentStep].classList.remove("d-none");
+      };
+    });
+    </script>
+
+    <!-- Login Button -->
+    <div class="text-center mt-3">
+      <button type="button" name="login" value="1" class="btn btn-primary w-100 mb-2" onclick="goToLoginStep(1)">
+        Next
+      </button>
+      <p>
+        <a href="{% url 'signup_basic' %}" class="btn btn-outline-secondary w-100">Sign up for free</a>
+      </p>
+    </div>
+
+    <!-- Error box (for JS validation) -->
+    <div id="formError" class="text-danger text-center fw-semibold py-1 d-none"></div>
+
+  </div>
+</div>
+
+<!-- Step 1 -->
+<div class="login-step d-none">
+  <div class="card p-4 shadow">
+    <div class="row">
+      <div class="col-sm-12 mb-3">
+        <div class="d-flex justify-content-between">
+          <div class="login-content-box">
+            <h3 class="">Log in</h3>
+            <p class="text-muted"><button type="button" class="btn btn-ghost p-1 ps-0" onclick="goToLoginStep(0)"><i class="fas fa-arrow-left"></i></button>  dinesh.siwas@rmail.team</p>
+          </div>
+          <div class="login-icon-box border rounded-circle ms-3 p-2 d-flex justify-content-center align-items-center">
+            <i class="iconoir-lock fs-26 px-1"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Password Field -->
+    <div class="mb-3 position-relative" id="passwordField">
+      <label class="form-label">Password <span class="text-danger">*</span></label>
+      <input
+        type="password"
+        id="password"
+        name="password"
+        class="form-control"
+        placeholder="Enter password"
+      >
+      <i
+        class="fa fa-eye position-absolute"
+        id="togglePassword"
+        style="right:15px; top:38px; cursor:pointer;"
+      ></i>
+    </div>
+
+    <!-- Login Button -->
+    <div class="mt-3">
+      <button type="button" name="login" value="1" class="btn btn-primary w-100 mb-3" onclick="goToLoginStep(2)">
+        Login
+      </button>
+      <p>
+        <a href="{% url 'forgot_password' %}" class="fw-semibold">Reset Password</a>
+      </p>
+
+    </div>
+
+    <!-- Error box (for JS validation) -->
+    <div id="formError" class="text-danger text-center fw-semibold py-1 d-none"></div>
+
+  </div>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="login-step d-none">
+  <div class="card p-4 shadow">
+    <div class="row">
+      <div class="col-sm-12 mb-3">
+        <div class="d-flex justify-content-between">
+          <div class="login-content-box">
+            <h3 class="">Choose a delivery method</h3>
+            <p class="text-muted">Select how you want to receive the code with your phone number ending in <strong>9475</strong></p>
+          </div>
+          <div class="login-icon-box border rounded-circle ms-3 p-2 d-flex justify-content-center align-items-center">
+            <i class="iconoir-smartphone-device fs-26 px-1"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <p>Delivery Method <span class="text-danger">*</span></p>
+    <div class="form-check mb-2">
+        <input class="form-check-input" type="radio" name="otpMethod" id="otpSms" required>
+        <label class="form-check-label" for="otpSms">Text Message</label>
+      </div>
+
+      <div class="form-check mb-2">
+        <input class="form-check-input" type="radio" name="otpMethod" id="otpCall">
+        <label class="form-check-label" for="otpCall">Phone Call</label>
+      </div>
+
+    <!-- Login Button -->
+    <div class="mt-3">
+      <button type="button" name="login" value="1" class="btn btn-primary w-100 mb-2" onclick="goToLoginStep(3)">
+        Send Code
+      </button>
+      <p>
+        <button type="button" class="btn btn-outline-secondary w-100" onclick="goToLoginStep(4)">Choose Another Method</button>
+      </p>
+    </div>
+
+    <!-- Error box (for JS validation) -->
+    <div id="formError" class="text-danger text-center fw-semibold py-1 d-none"></div>
+
+  </div>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="login-step d-none">
+  <div class="card p-4 shadow">
+    <div class="row">
+      <div class="col-sm-12 mb-3">
+        <div class="d-flex justify-content-between">
+          <div class="login-content-box">
+            <h3 class="">Verify with SMS</h3>
+            <p class="text-muted">To verify your identity, enter the verification code sent to the phone number ending in <strong>9475</strong></p>
+          </div>
+          <div class="login-icon-box border rounded-circle ms-3 p-2 d-flex justify-content-center align-items-center">
+            <i class="iconoir-message-text fs-26 px-1"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="mb-3">
+        <label class="form-label">Verification Code <span class="text-danger">*</span></label>
+        <input type="text" id="loginOtp" class="form-control" maxlength="6" placeholder="123456">
+      </div>
+
+      <div class="mb-3 form-check">
+        <input type="checkbox" class="form-check-input" id="userConsentCheckBox" required="">
+        <label class="form-check-label mb-3" for="userConsentCheckBox">Remember this device</label>
+      </div>
+
+     <button type="button" class="btn btn-ghost">Resend Code</button> 
+    <!-- Login Button -->
+    <div class="mt-3">
+      <button type="button" name="login" value="1" class="btn btn-primary w-100 mb-2">
+        Verify
+      </button>
+      
+        <button type="button" class="btn btn-outline-secondary w-100" onclick="goToLoginStep(4)">Choose Another Method</button>
+      
+    </div>
+
+    <!-- Error box (for JS validation) -->
+    <div id="formError" class="text-danger text-center fw-semibold py-1 d-none"></div>
+
+  </div>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="login-step d-none">
+  <div class="card p-4 shadow">
+    <div class="row">
+      <div class="col-sm-12 mb-3">
+        <div class="d-flex justify-content-between">
+          <div class="login-content-box">
+            <h3 class="">Choose Verification Method</h3>
+            <p class="text-muted">Select how you want to verify.</p>
+          </div>
+          <div class="login-icon-box border rounded-circle ms-3 p-2 d-flex justify-content-center align-items-center">
+            <i class="iconoir-message-text fs-26 px-1"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card p-3" role="button" onclick="goToLoginStep(2)">
+      <div class="d-flex">
+        <div class="phone-icon-box me-3">
+          <i class="iconoir-phone fs-26 mt-1"></i>
+        </div>
+        <div class="phone-content-box">
+          <h3 class="mb-0">Phone</h3>
+          <p class="mb-0">Use your phone number ending in <strong>9475</strong></p>
+        </div>
+      </div>
+    </div>
+    <div class="card p-3 mb-0" role="button" onclick="goToLoginStep(5)">
+      <div class="d-flex">
+        <div class="email-icon-box me-3">
+          <i class="iconoir-mail fs-26"></i>
+        </div>
+        <div class="email-content-box">
+          <h3 class="mb-0">Email</h3>
+          <p class="mb-0">Use your <strong>di************as@rmail.team</strong> email</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  </div>
+
+  <!-- Step 5 -->
+  <div class="login-step d-none">
+  <div class="card p-4 shadow">
+    <div class="row">
+      <div class="col-sm-12 mb-3">
+        <div class="d-flex justify-content-between">
+          <div class="login-content-box">
+            <h3 class="">Get code from your email</h3>
+            <p class="text-muted">Enter the code from your email <strong>dinesh.siwas@rmail.team</strong></p>
+          </div>
+          <div class="login-icon-box border rounded-circle ms-3 p-2 d-flex justify-content-center align-items-center">
+            <i class="iconoir-mail fs-26 px-1"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="mb-3">
+        <label class="form-label">Verification Code <span class="text-danger">*</span></label>
+        <input type="text" id="loginOtpEmail" class="form-control" maxlength="6" placeholder="123456">
+      </div>
+
+      <button type="button" class="btn btn-ghost">Resend Code</button>
+
+    <!-- Login Button -->
+    <div class="mt-3">
+      <button type="button" name="login" value="1" class="btn btn-primary w-100 mb-2">
+        Verify
+      </button>
+
+        <button type="button" class="btn btn-outline-secondary w-100" onclick="goToLoginStep(4)">Choose Another Method</button>
+      
+    </div>
+
+    <!-- Error box (for JS validation) -->
+    <div id="formError" class="text-danger text-center fw-semibold py-1 d-none"></div>
+
+  </div>
+  </div>
+
+</form>
+
+        
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+{% endblock %}

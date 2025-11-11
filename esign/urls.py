@@ -23,9 +23,9 @@ urlpatterns = [
     path('verify-otp/<int:user_id>/', views.verify_otp, name='verify_otp'),
     path('marketing/', views.marketing_view, name='marketing'),
     path("resend-otp/", views.resend_otp, name="resend_otp"),
-    path('login/', views.user_login, name='user_login'),
+    path('login/', views.user_login1, name='user_login'),
     path('logout/', views.user_logout, name='user_logout'),
-    path('signup/', views.user_signup, name='user_signup'),
+    # path('signup/', views.user_signup, name='user_signup'),
     path('desgin/', views.desgin, name='desgin'),
     path('privacy_policy/', views.privacy_policy, name='privacy_policy'),
     path('terms_of_service/', views.terms_of_service, name='terms_of_service'),
@@ -36,10 +36,25 @@ urlpatterns = [
     path('buy_plain/', views.buy_plain, name='buy_plain'),
     path('admin_view/', views.admin_view, name='admin_view'),
     path('signup_steps/', views.signup_steps, name='signup_steps'),
+    path('signup/', views.signup_basic, name='signup_basic'),
+    path('signup/multi-step/', views.signup_multi_step, name='signup_multi_step'),
+
+
+    path('checkout/', views.checkout_view, name='checkout'),
+    path('create-checkout-session/', views.create_checkout_session, name='create_checkout_session'),
+    path('success/', views.success_view, name='stripe_success'),
+    path('cancel/', views.cancel_view, name='stripe_cancel'),
+
     path('forgot_password/', views.forgot_password, name='forgot_password'),
     path('change_password/', views.change_password, name='change_password'),
+    path('send-mobile-otp/', views.send_mobile_otp, name='send_mobile_otp'),
     path('otp_email/', views.otp_email, name='otp_email'),
     path('password_email/', views.password_email, name='password_email'),
 
 
 ]
+
+
+# SINCH_APPID=mehasmbalt
+# SINCH_USERID=mehasmbalt
+# SINCH_PASSWORD=meharf_08

@@ -243,13 +243,25 @@
                         </div>
                     </li> -->
 
-                    <li class="topbar-item">17 Days Left</li>
+                    <!-- <li class="topbar-item">17 Days Left</li>
 
                     <li class="topbar-item ms-3">
                         <a class="btn btn-success rounded-pill px-3" href="https://esign.studyineurope.xyz/pricing/" target="_blank">
                             View Plans
                         </a>                    
-                    </li>
+                    </li> -->
+
+                    {% if subscription %}
+    <li class="topbar-item">{{ days_left }} Days Left</li>
+    <li class="topbar-item ms-3">
+        <a class="btn btn-success rounded-pill px-3" href="https://esign.studyineurope.xyz/pricing/" target="_blank">View Plans</a>
+    </li>
+{% else %}
+    <li class="topbar-item ms-3">
+        <a class="btn btn-success rounded-pill px-3" href="https://esign.studyineurope.xyz/pricing/" target="_blank">View Plans</a>
+    </li>
+{% endif %}
+
 
                     <li class="dropdown topbar-item ms-3">
                         <a class="nav-link dropdown-toggle arrow-none nav-icon bg-primary text-uppercase text-white fw-bold fs-18" data-bs-toggle="dropdown" href="#" role="button"
@@ -354,7 +366,16 @@
                                     </li><!--end nav-item-->
                                     <li class="nav-item">
                                         <a class="nav-link" href="{% url 'signature_satus' %}">Signature Status</a>
-                                    </li><!--end nav-item-->
+                                    </li>
+                                    {% if user.is_superuser %}
+
+                                       <li class="nav-item">
+                                        <a class="nav-link" href="{% url 'dashboard:user_list' %}">User List</a>
+                                    </li>
+                                 {% endif %}
+   
+                                    
+                                    <!--end nav-item-->
                                     
                                     <!-- <li class="nav-item">
                                         <a class="nav-link" href="{% url 'comming_soon_get' %}">Recent Activity</a>

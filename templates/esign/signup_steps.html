@@ -1,14 +1,30 @@
 {% extends "esign/base_login.html" %}
 {% block content %}
 {% load static %}
+{% if messages %}
+  {% for message in messages %}
+    {% if message.tags == 'success' %}
+      <small id="msgg" class="text-success fw-semibold d-block text-center mb-2">{{ message }}</small>
+    {% elif message.tags == 'info' %}
+      <small id="msgg" class="text-info fw-semibold d-block text-center mb-2">{{ message }}</small>
+    {% elif message.tags == 'error' %}
+      <small id="msgg" class="text-danger fw-semibold d-block text-center mb-2">{{ message }}</small>
+    {% endif %}
+  {% endfor %}
+{% endif %}
+
 <div class="d-flex justify-content-center align-items-center">
   <div class="container-fluid">
     <div class="row">
       <div class="col-sm-12 col-lg-8 offset-lg-2">
         <div class="login-wrapper">
     <form method="post" id="signupForm">
+      <input type="hidden" name="userEmail" id="userEmail" class="form-control" required
+       value="{{ email_prefill }}">
+                   <input type="hidden" name="step" id="stepInput" value="{{ step }}">
+
       {% csrf_token %}
-      <div class="step mt-5">
+        <div class="step {% if step != 0 %}d-none{% endif %} mt-5">
         <div class="row">
          <div class="col-sm-12 col-md-6">
           <h3 class="">Let’s start!</h3>
@@ -60,18 +76,67 @@
       </div>
     </div>
 
-      <div class="step d-none mt-5">
+        <div class="step {% if step != 1 %}d-none{% endif %} mt-5">
         <div class="row">
          <div class="col-sm-12 col-md-6">
           <h3 class="">Check your email</h3>
-            <p class="text-muted mb-4">A temporary confirmation code was sent to <strong>dinesh.siwas@rmail.team</strong></p>
+            <p class="text-muted mb-4">A temporary confirmation code was sent to <strong>{{email_prefill}}</strong></p>
 
           <div class="mb-5">
             <label class="form-label" for="emailVerificationCode">Verification Code <span style="color: red;"> *</span></label>
-            <input type="text" name="emailVerificationCode" id="emailVerificationCode" class="form-control" placeholder="6 Digit Verification Code" required value="">
+            <input type="text" max="6" maxlength="6" name="emailVerificationCode" id="emailVerificationCode" class="form-control" placeholder="6 Digit Verification Code" required value="">
           </div>
-          <p><span class="btn btn-sm btn btn-outline-secondary me-2">Send my code again</span> <a href="/signup" class="btn btn-sm btn btn-outline-secondary">Use a different email address</a></p>
-          <div class="text-center mt-3">
+<p>
+  <button type="button" id="resendOtpBtn" class="btn btn-sm btn-outline-secondary me-2">
+    Send my code again
+  </button>
+  <a href="/signup" class="btn btn-sm btn-outline-secondary">Use a different email address</a>
+</p>
+
+<!-- OTP message placeholder -->
+<div id="otpMessage" class="mt-2"></div>
+
+
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function() {
+    $('#resendOtpBtn').click(function() {
+        var email = "{{ request.session.signup_email|default:'' }}"; // email from session
+
+        if(!email){
+            $('#otpMessage').html('<div class="text-danger">Email not found in session.</div>');
+            return;
+        }
+
+        $.ajax({
+            url: "{% url 'resend_otp' %}",
+            method: "POST",
+            data: {
+                email: email,
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            beforeSend: function() {
+                $('#resendOtpBtn').prop('disabled', true).text('Sending...');
+            },
+            success: function(response) {
+                $('#resendOtpBtn').prop('disabled', false).text('Send my code again');
+                if(response.success){
+                    $('#otpMessage').html('<div class="text-success">'+response.message+'</div>');
+                } else {
+                    $('#otpMessage').html('<div class="text-danger">'+response.message+'</div>');
+                }
+            },
+            error: function(xhr, status, error) {
+                $('#resendOtpBtn').prop('disabled', false).text('Send my code again');
+                $('#otpMessage').html('<div class="text-danger">Something went wrong. Please try again.</div>');
+            }
+        });
+    });
+});
+</script>
+
+<div class="text-center mt-3">
             <button type="button" class="btn btn-primary w-100" onclick="goToStep(2)">Next</button>
           </div>
         </div>
@@ -81,7 +146,7 @@
       </div>
     </div>
 
-    <div class="step d-none mt-5">
+      <div class="step {% if step != 2 %}d-none{% endif %} mt-5">
       <div class="row">
        <div class="col-sm-12 col-md-6">
         <h3 class="">Secure Your Account</h3>
@@ -103,17 +168,61 @@
     </div>
   </div>
 
-  <div class="step d-none mt-5">
+            <div class="step {% if step != 3 %}d-none{% endif %} mt-5">
     <div class="row">
      <div class="col-sm-12 col-md-6">
       <h3 class="">Verify your number</h3>
-        <p class="text-muted mb-4">Enter the temporary verification code sent to <strong>9988776655</strong></p>
+        <p class="text-muted mb-4">Enter the temporary verification code sent to <strong>{{mobile}}</strong></p>
 
       <div class="mb-2">
         <label class="form-label" for="phoneVerificationCode">Verification Code <span style="color: red;"> *</span></label>
-        <input type="text" name="phoneVerificationCode" id="phoneVerificationCode" class="form-control" placeholder="6 Digit Verification Code" required value="">
+        <input type="text" maxlength="6" minlength="6" name="phoneVerificationCode" id="phoneVerificationCode" class="form-control" placeholder="6 Digit Verification Code" required value="">
       </div>
-      <p class="mb-5"><button class="btn btn-sm btn btn-outline-secondary me-2">Resend code again</button> <!-- <button class="btn btn-sm btn btn-outline-secondary">Use a different phone number</button> --></p>
+<p class="mb-5">
+  <button type="button" id="resendMobileOtpBtn" class="btn btn-sm btn-outline-secondary me-2">
+    Resend code again
+  </button>
+  <!-- <button class="btn btn-sm btn-outline-secondary">Use a different phone number</button> -->
+</p>
+
+<div id="mobileOtpMessage"></div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function() {
+    $('#resendMobileOtpBtn').click(function() {
+        var phone = "{{ request.session.signup_phone|default:'' }}";  // session se phone
+
+        if (!phone) {
+            $('#mobileOtpMessage').html('<div class="text-danger">Phone number not found in session.</div>');
+            return;
+        }
+
+        $.ajax({
+            url: "{% url 'send_mobile_otp' %}",
+            method: "POST",
+            data: {
+                phone: phone,
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            beforeSend: function() {
+                $('#resendMobileOtpBtn').prop('disabled', true).text('Sending...');
+            },
+            success: function(response) {
+                $('#resendMobileOtpBtn').prop('disabled', false).text('Resend code again');
+                if (response.success) {
+                    $('#mobileOtpMessage').html('<div class="text-success">'+response.message+'</div>');
+                } else {
+                    $('#mobileOtpMessage').html('<div class="text-danger">'+response.message+'</div>');
+                }
+            },
+            error: function(xhr, status, error) {
+                $('#resendMobileOtpBtn').prop('disabled', false).text('Resend code again');
+                $('#mobileOtpMessage').html('<div class="text-danger">Something went wrong. Please try again.</div>');
+            }
+        });
+    });
+});
+</script>
 
       <p class="small">By choosing to verify, you agree to the <a href="/terms_of_service" class="d-inline-block">Terms of Service</a> and <a href="/privacy_policy" class="d-inline-block">Privacy Policy</a>.</p>
       <div class="text-center mt-3">
@@ -126,7 +235,7 @@
   </div>
 </div>
 
-<div class="step d-none mt-5">
+            <div class="step {% if step != 4 %}d-none{% endif %} mt-5">
   <div class="row">
    <div class="col-sm-12 col-md-6">
     <h3 class="">Set your password</h3>
@@ -134,20 +243,31 @@
 
     <div class="mb-5 position-relative">
       <label class="form-label" for="userPassword">Password <span style="color: red;">*</span></label>
-      <div class="input-group">
-        <input type="password" name="userPassword" id="userPassword" class="form-control" placeholder="Password" required>
-        <button type="button" class="btn btn-outline-secondary" id="togglePassword">
-          <i class="fas fa-eye"></i>
-        </button>
-      </div>
+    <div class="input-group mb-3" style="max-width: 400px;">
+  <input 
+    type="password" 
+    name="userPassword" 
+    id="userPassword" 
+    class="form-control" 
+    placeholder="Password" 
+    required
+    pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}" 
+    title="Password must be at least 8 characters, include uppercase, lowercase, and a number"
+  >
+  <button type="button" class="btn btn-outline-secondary" id="togglePassword">
+    <i class="fas fa-eye" id="eyeIcon"></i>
+  </button>
+</div>
+
+
       <div id="passwordHelp" class="form-text mt-3">
-        <p class="small text-muted mb-1"><i class="fas fa-check me-1"></i> Must be atleast 6 characters long.</p>
+        <p class="small text-muted mb-1"><i class="fas fa-check me-1"></i> Must be atleast 8 characters long.</p>
         <p class="small text-muted"><i class="fas fa-check me-1"></i> Must contain the characters (A–Z, a–z, 0–9, @#).</p>
       </div>
     </div>
 
     <div class="text-center">
-      <button type="button" class="btn btn-primary w-100">Next</button>
+      <button type="button" class="btn btn-primary w-100" onclick="goToStep(5)">Next</button>
     </div>
   </div>
   <div class="col-sm-12 col-md-6">
@@ -166,69 +286,39 @@
 </form>
 
 <script>
-  const togglePassword = document.querySelector("#togglePassword");
-  const password = document.querySelector("#userPassword");
-  const toggleConfirmPassword = document.querySelector("#toggleConfirmPassword");
-  const confirmPassword = document.querySelector("#confirmPasswordHelp");
-  const passwordHelp = document.getElementById("passwordHelp");
-  const confirmError = document.getElementById("confirmError");
-  const signupForm = document.getElementById("signupForm");
+  const steps = document.querySelectorAll('.step');
+  let currentStep = {{ step|default:0 }}; // preserve step from Django context
+  const signupForm = document.getElementById('signupForm');
 
-            // Toggle show/hide
-            togglePassword.addEventListener("click", function () {
-              const type = password.getAttribute("type") === "password" ? "text" : "password";
-              password.setAttribute("type", type);
-              this.querySelector("i").classList.toggle("fa-eye");
-              this.querySelector("i").classList.toggle("fa-eye-slash");
-            });
+  function goToStep(stepIndex) {
+    // Validate current step inputs
+    const inputs = steps[currentStep].querySelectorAll("input");
+    for (let input of inputs) {
+      if (!input.checkValidity()) {
+        input.reportValidity();
+        return;
+      }
+    }
 
-            toggleConfirmPassword.addEventListener("click", function () {
-              const type = confirmPassword.getAttribute("type") === "password" ? "text" : "password";
-              confirmPassword.setAttribute("type", type);
-              this.querySelector("i").classList.toggle("fa-eye");
-              this.querySelector("i").classList.toggle("fa-eye-slash");
-            });
+    // Update hidden input for step
+    document.getElementById('stepInput').value = stepIndex;
 
-            // Password validation regex
-            function validatePasswordStrength(pwd) {
-              const strongRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@#])[A-Za-z\d@#]{8,}$/;
-              return strongRegex.test(pwd);
-            }
+    // Submit the form to Django for server-side processing
+    signupForm.submit();
+  }
 
-            // Real-time validation
-            password.addEventListener("input", () => {
-              if (!validatePasswordStrength(password.value)) {
-                passwordHelp.innerHTML = '<i class="fas fa-exclamation-circle me-1"></i> Password must include upper, lower, number, symbol & be ≥8 characters.';
-                passwordHelp.classList.add("text-danger");
-                passwordHelp.classList.remove("text-success");
-              } else {
-                passwordHelp.innerHTML = '<i class="fas fa-check-circle me-1"></i> Strong password.';
-                passwordHelp.classList.remove("text-danger");
-                passwordHelp.classList.add("text-success");
-              }
-            });
+   const togglePassword = document.getElementById("togglePassword");
+    if(togglePassword){
+        togglePassword.addEventListener("click", function(){
+            const password = document.getElementById("userPassword");
+            password.type = password.type === "password" ? "text" : "password";
+             this.classList.toggle("fa-eye");
+            this.classList.toggle("fa-eye-slash");
+        });
+    }
 
-            confirmPassword.addEventListener("input", () => {
-              confirmError.style.display = confirmPassword.value !== password.value ? "block" : "none";
-            });
+</script>
 
-            // ✅ Final form validation before submit
-            signupForm.addEventListener("submit", (e) => {
-              let valid = true;
-
-              if (!validatePasswordStrength(password.value)) {
-                valid = false;
-                password.focus();
-                alert("Please enter a strong password (must include upper, lower, number, symbol & be ≥8 characters).");
-              } else if (confirmPassword.value !== password.value) {
-                valid = false;
-                confirmPassword.focus();
-                alert("Passwords do not match. Please recheck.");
-              }
-
-              if (!valid) e.preventDefault(); // stop submission
-            });
-          </script>
 
         </div>
       </div>

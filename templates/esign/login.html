@@ -13,7 +13,7 @@
             {% for message in messages %}
               {% if message.tags == 'success' %}
                 <small  id="msgg" class="text-success fw-semibold d-block text-center mb-2">{{ message }}</small>
-              {% elif message.tags == 'error' and 'Invalid OTP' not in message %}
+              {% elif message.tags == 'error'  %}
                 <small  id="msgg" class="text-danger fw-semibold d-block text-center mb-2">{{ message }}</small>
               {% endif %}
             {% endfor %}
@@ -21,94 +21,131 @@
         <p id="otpStatus" class="text-center mt-2 fw-semibold small"></p>
 
          <form method="post" id="loginForm">
+                      <input type="hidden" name="step" id="stepInput" value="{{ stepInput|default:1 }}">
+
   {% csrf_token %}
   <!-- Step 0 -->
-  <div class="login-step">
-  <div class="card p-4 shadow">
-    <div class="row">
-      <div class="col-sm-12 mb-3">
-        <div class="d-flex justify-content-between">
-          <div class="login-content-box">
-            <h3 class="">Log in to EazeeSign</h3>
-            <p class="text-muted">Enter your email to Log in.</p>
-          </div>
-          <div class="login-icon-box border rounded-circle ms-3 p-2 d-flex justify-content-center align-items-center">
-            <i class="iconoir-log-in fs-26 px-1"></i>
+  <div class="login-step {% if stepInput != 0 %}d-none{% endif %}">
+    <div class="card p-4 shadow">
+      <div class="row">
+        <div class="col-sm-12 mb-3">
+          <div class="d-flex justify-content-between">
+            <div class="login-content-box">
+              <h3 class="">Log in to EazeeSign</h3>
+              <p class="text-muted">Enter your email to Log in.</p>
+            </div>
+            <div class="login-icon-box border rounded-circle ms-3 p-2 d-flex justify-content-center align-items-center">
+              <i class="iconoir-log-in fs-26 px-1"></i>
+            </div>
           </div>
         </div>
       </div>
+      <!-- Email Field -->
+      <div class="mb-3" id="emailField">
+        <label class="form-label">Email <span class="text-danger">*</span></label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          class="form-control"
+          value="{{ request.POST.email|default_if_none:'' }}"
+          placeholder="Enter your email"
+          required
+            pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+
+        >
+      </div>
+ <script>
+document.addEventListener("DOMContentLoaded", function() {
+    const loginForm = document.getElementById('loginForm');
+    const stepInput = document.getElementById('stepInput');
+
+    // Submit the form with the current step
+    window.goToLoginStep = function(stepIndex) {
+      console.log("stepIndex",stepIndex);
+      stepIndex = stepIndex- 1;
+        const steps = document.querySelectorAll('.login-step');
+        if (!steps[stepIndex]) return;
+      console.log(stepIndex,"stepIndex");
+        // Validate inputs in the current step
+        const inputs = steps[stepIndex].querySelectorAll("input");
+        for (let input of inputs) {
+            if (!input.checkValidity()) {
+                input.reportValidity();
+                return;
+            }
+                const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+              if (input.type === 'email') {
+                    if (!emailPattern.test(input.value.trim())) {
+                        valid = false;
+                        alert("Please enter a valid email");
+                        input.focus();
+                        return;
+                    }
+                }
+        }
+
+        // Set step and submit form
+        stepInput.value = stepIndex;
+        loginForm.submit();
+    };
+    console.log("fds");
+    // Toggle password visibility
+    const togglePassword = document.getElementById("togglePassword");
+    if(togglePassword){
+        togglePassword.addEventListener("click", function(){
+            const password = document.getElementById("password");
+            password.type = password.type === "password" ? "text" : "password";
+             this.classList.toggle("fa-eye");
+            this.classList.toggle("fa-eye-slash");
+        });
+    }
+     
+});
+</script>
+<style>
+#togglePassword {
+    position: absolute;
+    right: 15px;
+    top: 38px;
+    cursor: pointer;
+    color: #6c757d; /* gray color */
+    font-size: 1.1rem;
+    user-select: none;
+}
+#togglePassword:hover {
+    color: #495057; /* darker on hover */
+}
+</style>
+
+
+
+      <!-- Login Button -->
+      <div class="text-center mt-3">
+        <button type="button" name="login" value="1" class="btn btn-primary w-100 mb-2" onclick="goToLoginStep(1)">
+          Next
+        </button>
+        <p>
+          <a href="{% url 'signup_basic' %}" class="btn btn-outline-secondary w-100">Sign up for free</a>
+        </p>
+      </div>
+
+      <!-- Error box (for JS validation) -->
+      <div id="formError" class="text-danger text-center fw-semibold py-1 d-none"></div>
+
     </div>
-    <!-- Email Field -->
-    <div class="mb-3" id="emailField">
-      <label class="form-label">Email <span class="text-danger">*</span></label>
-      <input
-        type="email"
-        id="email"
-        name="email"
-        class="form-control"
-        value="{{ request.POST.email|default_if_none:'' }}"
-        placeholder="Enter your email"
-        required
-      >
-    </div>
-
-    <!-- Hidden Email (for OTP retry) -->
-    <input
-      type="hidden"
-      id="hiddenEmail"
-      name="hidden_email"
-      value="{{ request.POST.email|default_if_none:'' }}"
-    >
-
-    <!-- OTP Field -->
-    <div class="mb-3" id="otpField" style="display:none;">
-      <label class="form-label">Enter Email OTP</label>
-      <input
-        type="tel"
-        name="otp"
-        id="otp"
-        class="form-control"
-        placeholder="Enter Email OTP"
-        oninput="if(this.value.length > 6) this.value = this.value.slice(0,6);"
-        maxlength="6"
-      >
-
-      <!-- Error for OTP -->
-      {% if messages %}
-        {% for message in messages %}
-          {% if message.tags == 'error' %}
-            <small class="text-danger fw-semibold d-block mt-1">{{ message }}</small>
-          {% endif %}
-        {% endfor %}
-      {% endif %}
-
-    </div>
-
-    <!-- Login Button -->
-    <div class="text-center mt-3">
-      <button type="button" name="login" value="1" class="btn btn-primary w-100 mb-2" onclick="goToLoginStep(1)">
-        Next
-      </button>
-      <p>
-        <a href="{% url 'user_signup' %}" class="btn btn-outline-secondary w-100">Sign up for free</a>
-      </p>
-    </div>
-
-    <!-- Error box (for JS validation) -->
-    <div id="formError" class="text-danger text-center fw-semibold py-1 d-none"></div>
-
   </div>
-</div>
 
 <!-- Step 1 -->
-<div class="login-step d-none">
+<div class="login-step {% if stepInput != 2 %}d-none{% endif %}">
   <div class="card p-4 shadow">
     <div class="row">
       <div class="col-sm-12 mb-3">
         <div class="d-flex justify-content-between">
           <div class="login-content-box">
             <h3 class="">Log in</h3>
-            <p class="text-muted"><button type="button" class="btn btn-ghost p-1 ps-0" onclick="goToLoginStep(0)"><i class="fas fa-arrow-left"></i></button>  dinesh.siwas@rmail.team</p>
+            <p class="text-muted"><button type="button" class="btn btn-ghost p-1 ps-0" onclick="goToLoginStep(0)"><i class="fas fa-arrow-left"></i></button>  {{email_prefill}}</p>
           </div>
           <div class="login-icon-box border rounded-circle ms-3 p-2 d-flex justify-content-center align-items-center">
             <i class="iconoir-lock fs-26 px-1"></i>
@@ -124,13 +161,16 @@
         id="password"
         name="password"
         class="form-control"
-        placeholder="Enter password"
+        placeholder="Enter password" required 
+         pattern="^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*?&]{6,}$"
       >
       <i
         class="fa fa-eye position-absolute"
-        id="togglePassword"
+        id="togglePassword" 
         style="right:15px; top:38px; cursor:pointer;"
       ></i>
+        <small id="passwordError" class="text-danger d-block mt-1 fw-semibold"></small>
+
     </div>
 
     <!-- Login Button -->
@@ -139,7 +179,9 @@
         Login
       </button>
       <p>
-        <a href="{% url 'forgot_password' %}" class="fw-semibold">Reset Password</a>
+      <a href="{% url 'forgot_password' %}?email={{email_prefill}}" class="fw-semibold">
+          Reset Password
+      </a>
       </p>
 
     </div>
@@ -151,14 +193,14 @@
   </div>
 
   <!-- Step 2 -->
-  <div class="login-step d-none">
+  <div class="login-step {% if stepInput != 3 %}d-none{% endif %}">
   <div class="card p-4 shadow">
     <div class="row">
       <div class="col-sm-12 mb-3">
         <div class="d-flex justify-content-between">
           <div class="login-content-box">
             <h3 class="">Choose a delivery method</h3>
-            <p class="text-muted">Select how you want to receive the code with your phone number ending in <strong>9475</strong></p>
+            <p class="text-muted">Select how you want to receive the code with your phone number ending in <strong>{{phone_prefill}}</strong></p>
           </div>
           <div class="login-icon-box border rounded-circle ms-3 p-2 d-flex justify-content-center align-items-center">
             <i class="iconoir-smartphone-device fs-26 px-1"></i>
@@ -168,15 +210,15 @@
     </div>
     
     <p>Delivery Method <span class="text-danger">*</span></p>
-    <div class="form-check mb-2">
-        <input class="form-check-input" type="radio" name="otpMethod" id="otpSms" required>
-        <label class="form-check-label" for="otpSms">Text Message</label>
-      </div>
-
       <div class="form-check mb-2">
-        <input class="form-check-input" type="radio" name="otpMethod" id="otpCall">
+        <input class="form-check-input" type="radio" name="otpMethod" id="otpSms" value="sms" required>
+        <label class="form-check-label" for="otpSms">Text Message</label>
+    </div>
+
+    <div class="form-check mb-2">
+        <input class="form-check-input" type="radio" name="otpMethod" id="otpCall" value="call">
         <label class="form-check-label" for="otpCall">Phone Call</label>
-      </div>
+    </div>
 
     <!-- Login Button -->
     <div class="mt-3">
@@ -195,14 +237,14 @@
   </div>
 
   <!-- Step 3 -->
-  <div class="login-step d-none">
+  <div class="login-step {% if stepInput != 4 %}d-none{% endif %}">
   <div class="card p-4 shadow">
     <div class="row">
       <div class="col-sm-12 mb-3">
         <div class="d-flex justify-content-between">
           <div class="login-content-box">
             <h3 class="">Verify with SMS</h3>
-            <p class="text-muted">To verify your identity, enter the verification code sent to the phone number ending in <strong>9475</strong></p>
+            <p class="text-muted">To verify your identity, enter the verification code sent to the phone number ending in <strong>{{phone_prefill}}</strong></p>
           </div>
           <div class="login-icon-box border rounded-circle ms-3 p-2 d-flex justify-content-center align-items-center">
             <i class="iconoir-message-text fs-26 px-1"></i>
@@ -213,7 +255,7 @@
     
     <div class="mb-3">
         <label class="form-label">Verification Code <span class="text-danger">*</span></label>
-        <input type="text" id="loginOtp" class="form-control" maxlength="6" placeholder="123456">
+        <input type="text" name="loginOtp" id="loginOtp"  pattern="\d{6}" class="form-control" maxlength="6" placeholder="123456" required>
       </div>
 
       <div class="mb-3 form-check">
@@ -221,14 +263,60 @@
         <label class="form-check-label mb-3" for="userConsentCheckBox">Remember this device</label>
       </div>
 
-     <button type="button" class="btn btn-ghost">Resend Code</button> 
+<p id="otpMessage" class="mt-2"></p>
+
+  <button type="button" id="resendMobileOtpBtn" class="btn btn-sm btn-outline-secondary me-2">
+    Resend code again
+  </button>
+  <!-- <button class="btn btn-sm btn-outline-secondary">Use a different phone number</button> -->
+</p>
+
+<div id="mobileOtpMessage"></div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function() {
+    $('#resendMobileOtpBtn').click(function() {
+        // var phone = "{{ request.session.signup_phone|default:'' }}";  // session se phone
+        var phone = "+918708114568";  // session se phone
+
+        if (!phone) {
+            $('#mobileOtpMessage').html('<div class="text-danger">Phone number not found in session.</div>');
+            return;
+        }
+
+        $.ajax({
+            url: "{% url 'send_mobile_otp' %}",
+            method: "POST",
+            data: {
+                phone: phone,
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            beforeSend: function() {
+                $('#resendMobileOtpBtn').prop('disabled', true).text('Sending...');
+            },
+            success: function(response) {
+                $('#resendMobileOtpBtn').prop('disabled', false).text('Resend code again');
+                if (response.success) {
+                    $('#mobileOtpMessage').html('<div class="text-success">'+response.message+'</div>');
+                } else {
+                    $('#mobileOtpMessage').html('<div class="text-danger">'+response.message+'</div>');
+                }
+            },
+            error: function(xhr, status, error) {
+                $('#resendMobileOtpBtn').prop('disabled', false).text('Resend code again');
+                $('#mobileOtpMessage').html('<div class="text-danger">Something went wrong. Please try again.</div>');
+            }
+        });
+    });
+});
+</script>
     <!-- Login Button -->
     <div class="mt-3">
-      <button type="button" name="login" value="1" class="btn btn-primary w-100 mb-2">
+      <button type="button" name="login" value="1" onclick="goToLoginStep(4)" class="btn btn-primary w-100 mb-2">
         Verify
       </button>
       
-        <button type="button" class="btn btn-outline-secondary w-100" onclick="goToLoginStep(4)">Choose Another Method</button>
+        <!-- <button type="button" class="btn btn-outline-secondary w-100" onclick="goToLoginStep(4)">Choose Another Method</button> -->
       
     </div>
 
@@ -262,7 +350,7 @@
         </div>
         <div class="phone-content-box">
           <h3 class="mb-0">Phone</h3>
-          <p class="mb-0">Use your phone number ending in <strong>9475</strong></p>
+          <p class="mb-0">Use your phone number ending in <strong>{{phone_prefill}}</strong></p>
         </div>
       </div>
     </div>
@@ -329,151 +417,6 @@
     </div>
   </div>
 </div>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  const loginForm = document.getElementById('loginForm');
-  const emailField = document.getElementById('emailField');
-  const hiddenEmail = document.getElementById('hiddenEmail');
-  const otpField = document.getElementById('otpField');
-  const passwordField = document.getElementById('passwordField');
-  const sendOtpBtnWrapper = document.getElementById('sendOtpBtnWrapper');
-  const resendOtpBtnWrapper = document.getElementById('resendOtpBtnWrapper');
-  const orDivider = document.getElementById('orDivider');
-  const errorBox = document.getElementById('formError');
-  const passwordInput = document.getElementById('password');
-  const emailInput = document.getElementById('email');
-  const otpStatus = document.getElementById('otpStatus');
-
-  // Messages from Django
-  const messages = `{% if messages %}{% for m in messages %}{{ m }}{% endfor %}{% endif %}`;
-  const invalidOtp = messages.includes("Invalid OTP");
-  const invalidLogin = messages.includes("Invalid email or password");
-
-  const otpSent = "{{ request.POST.send_otp|default:'' }}";
-
-  // Show OTP field only if OTP flow and not invalid login
-  if ((otpSent === "1" || invalidOtp) && !invalidLogin) {
-    emailField.style.display = "none";
-    passwordField.style.display = "none";
-    orDivider.style.display = "none";
-    sendOtpBtnWrapper.style.display = "none";
-    resendOtpBtnWrapper.style.display = "block";
-    otpField.style.display = "block";
-
-    // preserve email in hidden field
-    const emailVal = hiddenEmail.value || emailInput.value;
-    hiddenEmail.value = emailVal;
-    emailInput.value = emailVal;
-  } else {
-    // If login failed with invalid credentials, show all fields
-    emailField.style.display = "block";
-    passwordField.style.display = "block";
-    orDivider.style.display = "block";
-    sendOtpBtnWrapper.style.display = "block";
-    otpField.style.display = "none";
-    resendOtpBtnWrapper.style.display = "none";
-  }
-
-  // Form validation
-  loginForm.addEventListener('submit', function(e) {
-
-    const otp = document.getElementById('otp').value.trim();
-    const password = passwordInput.value.trim();
-    const submitter = e.submitter ? e.submitter.name : '';
-
-    // Clear old error
-    errorBox.classList.add('d-none');
-    errorBox.textContent = '';
-
-    if (submitter === 'login') {
-      if (otpField.style.display === "block") {
-        // 🔹 OTP mode active
-        if (otp.length === 0) {
-          e.preventDefault();
-          showOtpError("Please enter the OTP.");
-        } else if (otp.length !== 6) {
-          e.preventDefault();
-          showOtpError("OTP must be 6 digits.");
-        } else {
-          passwordInput.value = ""; // ignore password if OTP flow
-        }
-      } else if (!password) {
-        // 🔹 Password login mode
-        e.preventDefault();
-        errorBox.textContent = "Please enter your password or send OTP.";
-        errorBox.classList.remove('d-none');
-      }
-    }
-  });
-
-  function showOtpError(message) {
-    let errorMsg = otpField.querySelector(".otp-error-msg");
-    if (!errorMsg) {
-      errorMsg = document.createElement("small");
-      errorMsg.className = "text-danger fw-semibold d-block mt-1 otp-error-msg";
-      otpField.appendChild(errorMsg);
-    }
-    errorMsg.textContent = message;
-  }
-
-  // Toggle password visibility
-  // Toggle password visibility
-  document.getElementById('togglePassword').addEventListener('click', function() {
-      const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-      passwordInput.setAttribute('type', type);
-
-      // Toggle icons correctly
-      this.classList.toggle('fa-eye');
-      this.classList.toggle('fa-eye-slash');
-  });
-
-
-  // AJAX Resend OTP
-  const resendOtpBtn = document.getElementById('resendOtpBtn');
-  resendOtpBtn?.addEventListener('click', function() {
-    const email = hiddenEmail.value.trim() || emailInput.value.trim();
-    if (!email) {
-      otpStatus.textContent = "Email is missing.";
-      otpStatus.classList.add("text-danger");
-      return;
-    }
-
-    resendOtpBtn.disabled = true;
-    otpStatus.textContent = "Resending OTP...";
-    otpStatus.classList.remove("text-danger", "text-success");
-    otpStatus.classList.add("text-info");
-    document.getElementById("msgg")?.classList.add("d-none");
-
-    fetch("{% url 'resend_otp' %}", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "X-CSRFToken": "{{ csrf_token }}",
-      },
-      body: new URLSearchParams({ email: email })
-    })
-    .then(res => res.json())
-    .then(data => {
-      resendOtpBtn.disabled = false;
-      if (data.success) {
-        otpStatus.textContent = `OTP sent to ${email}. ${data.otp} Please check your inbox.`;
-        otpStatus.classList.remove("text-danger", "text-info");
-        otpStatus.classList.add("text-success");
-      } else {
-        otpStatus.textContent = data.message;
-        otpStatus.classList.remove("text-success", "text-info");
-        otpStatus.classList.add("text-danger");
-      }
-    })
-    .catch(() => {
-      resendOtpBtn.disabled = false;
-      otpStatus.textContent = "Something went wrong!";
-      otpStatus.classList.remove("text-success", "text-info");
-      otpStatus.classList.add("text-danger");
-    });
-  });
-});
-</script>
 
 
 {% endblock %}

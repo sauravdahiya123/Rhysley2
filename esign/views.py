@@ -2218,7 +2218,7 @@ def success_view(request):
     )
     email.content_subtype = "html"  # Important!
     email.send(fail_silently=False)
-
+    
     # Log user in automatically
     try:
         login(request, user, backend='django.contrib.auth.backends.ModelBackend')

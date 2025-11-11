@@ -179,7 +179,7 @@
 
 
 <!-- Multi step signup form process -->
-<script>
+<!-- <script>
   const steps = document.querySelectorAll(".step");
   let currentStep = 0;
 
@@ -196,45 +196,21 @@
   lastNameInput.addEventListener("input", updateSignature);
 
   // ✅ Step Navigation with validation
-  function goToStep(stepIndex) {
-    const inputs = steps[currentStep].querySelectorAll("input");
-    for (let input of inputs) {
-      if (!input.checkValidity()) {
-        input.reportValidity();
-        return;
-      }
-    }
 
-    steps[currentStep].classList.add("d-none");
-    currentStep = stepIndex;
-    steps[currentStep].classList.remove("d-none");
-  }
 
   // ✅ Handle form submit
   document.getElementById("signupForm").addEventListener("submit", function(e) {
     e.preventDefault();
     alert("Form submitted successfully!");
   });
-</script>
+</script> -->
 
 <!-- Multi step login form process -->
 <script>
   const loginSteps = document.querySelectorAll(".login-step");
   let loginCurrentStep = 0;
 
-  function goToLoginStep(stepIndex) {
-    const fields = loginSteps[loginCurrentStep].querySelectorAll("input");
-    for (let field of fields) {
-      if (!field.checkValidity()) {
-        field.reportValidity();
-        return;
-      }
-    }
 
-    loginSteps[loginCurrentStep].classList.add("d-none");
-    loginCurrentStep = stepIndex;
-    loginSteps[loginCurrentStep].classList.remove("d-none");
-  }
 
   document.getElementById("loginForm").addEventListener("submit", function(e) {
     e.preventDefault();
