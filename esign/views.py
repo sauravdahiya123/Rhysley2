@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from .models import Document, Signature, SignaturePlacement, SigningToken,SignatureBox,SignaturePage,DocumentSignFlow,Profile,MarketingSource
+from .models import Document, Signature, SignaturePlacement,Subscription  , SigningToken,SignatureBox,SignaturePage,DocumentSignFlow,Profile,MarketingSource
 from .forms import DocumentUploadForm, SignatureUploadForm,MarketingForm,ContactInquiryForm
 from django.utils import timezone
 from django.core.mail import send_mail
@@ -56,14 +56,136 @@ def cookie_settings(request):
     return render(request, 'esign/cookie_settings.html')    
 
 def signup_steps(request):
-    return render(request, 'esign/signup_steps.html')    
+    return render(request, 'esign/signup_steps.html')  
+  
+import random, datetime
 
 def forgot_password(request):
-    return render(request, 'esign/forgot_password.html')    
+    if request.method == "GET":
+        email_param = request.GET.get('email')
+
+        if email_param:
+            email = email_param  # real email from URL
+
+            # ✅ Send OTP automatically
+            try:
+                user = User.objects.get(email=email)
+                otp = random.randint(100000, 999999)
+                request.session['reset_email'] = email
+                request.session['reset_otp'] = otp
+                request.session['otp_expires'] = str(timezone.now() + datetime.timedelta(minutes=10))
+
+                # Send OTP email
+                send_mail(
+                    subject="Password Reset OTP",
+                    message=f"Your password reset code is {otp}. It will expire in 10 minutes.",
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[email],
+                    fail_silently=False,
+                )
+                name = email.split('@')[0]
+                html_content = render_to_string('esign/otp_email.html', {
+                
+                'EXPIRY_MINUTES': "10",
+                "name":name,
+                'otp': otp,  # if you want to include OTP
+                })
+
+                # Create EmailMessage
+                email1 = EmailMessage(
+                    subject="Password Reset OTP",
+                    body=html_content,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    to=[email]         # recipient email
+                )
+                email1.content_subtype = "html"
+
+                # Send email
+                email1.send(fail_silently=False)
+
+
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                    return JsonResponse({'success': True, 'message': 'OTP resent successfully!'})
+
+                messages.success(request, "OTP sent successfully! Please check your email.")
+                return render(request, "esign/forgot_password.html", {"masked_email": email_param})
+            
+                # messages.success(request, f"OTP sent successfully! Please check your email. {otp} ")
+                # return redirect('forgot_password')
+            except User.DoesNotExist:
+                messages.error(request, "No account found with this email.")
+
+        return render(request, "esign/forgot_password.html", {"masked_email": email_param})
+
+    elif request.method == "POST":
+        email = request.POST.get("email")
+        entered_otp = request.POST.get("otp")
+
+        # Check OTP for this email
+        session_email = request.session.get('reset_email')
+        session_otp = request.session.get('reset_otp')
+        otp_expires = request.session.get('otp_expires')
+
+       
+        if timezone.now() > timezone.datetime.fromisoformat(otp_expires):
+            messages.error(request, "OTP expired. Please request a new one.")
+        elif str(session_otp) != str(entered_otp):
+            messages.error(request, "Incorrect OTP. Please try again.")
+        else:
+            messages.success(request, "OTP verified successfully! You can reset your password now.")
+            return redirect('change_password')  # redirect to password reset page
+
+        return render(request, "esign/forgot_password.html", {"email": email,"masked_email":email})
+
+
+
+
+
+
+
+
 
 def change_password(request):
-    return render(request, 'esign/change_password.html')    
+    session_email = request.session.get('reset_email')
 
+    if not session_email:
+        messages.warning(request, "No email found in session. Please request OTP again.")
+        return redirect('forgot_password')
+
+    if request.method == "POST":
+        new_password = request.POST.get('new_password')
+
+        try:
+            user = User.objects.get(email=session_email)
+
+            # Check if new password is same as old password
+            if check_password(new_password, user.password):
+                messages.error(request, "New password cannot be the same as the old password.")
+            else:
+                # Update password (hashed)
+                user.password = make_password(new_password)
+                user.save()
+
+                # Clear session
+                request.session.pop('reset_email', None)
+                request.session.pop('reset_otp', None)
+                request.session.pop('otp_expires', None)
+
+                # Automatically log in the user
+                authenticated_user = authenticate(username=user.username, password=new_password)
+                if authenticated_user is not None:
+                    login(request, authenticated_user)
+                    messages.success(request, "Password updated successfully! You are now logged in.")
+                    return redirect('index')  # Redirect to dashboard
+
+                else:
+                    messages.success(request, "Password updated! Please log in.")
+                    return redirect('login')
+
+        except User.DoesNotExist:
+            messages.error(request, "User not found in database.")
+
+    return render(request, 'esign/change_password.html', {'email': session_email})
 def otp_email(request):
     return render(request, 'esign/otp_email.html')    
 
@@ -111,13 +233,11 @@ def resend_otp(request):
             return JsonResponse({"success": False, "message": "Email is required."})
 
         try:
-            profile = Profile.objects.get(user__email=email)
-            otp = random.randint(100000, 999999)
-            profile.email_otp = otp
-            profile.save()
-            # Profile.objects.filter(user__email=email).update(otp=otp)
 
-            print("profile",profile)
+            profile = User.objects.get(email=email)
+            otp = random.randint(100000, 999999)
+            request.session["email_otp"] = otp
+
 
             send_mail(
                 subject="Your new OTP",
@@ -285,59 +405,60 @@ def verify_otp(request, user_id):
 
     return render(request, 'esign/verify_otp.html', {'email': user.email})
 
-
-
 def user_signup(request):
-    if request.method == "POST":
-        first_name = request.POST.get('username')
-        last_name = request.POST.get('userLastName')
-        email = request.POST.get('userEmail')
-        phone = request.POST.get('userPhone')
-        password = request.POST.get('userPassword')
-        confirm_password = request.POST.get('confirmPasswordHelp')
-        print("User create2")
-        messages.get_messages(request)  # Clear old ones
-        if password != confirm_password:
-            messages.error(request, "Passwords do not match.")
-            # return redirect('user_signup',{"post_data": request.POST})
-            return render(request, "esign/signup.html", {"post_data": request.POST})
+    pass
 
-        print("User create1")
+# def user_signup(request):
+#     if request.method == "POST":
+#         first_name = request.POST.get('username')
+#         last_name = request.POST.get('userLastName')
+#         email = request.POST.get('userEmail')
+#         phone = request.POST.get('userPhone')
+#         password = request.POST.get('userPassword')
+#         confirm_password = request.POST.get('confirmPasswordHelp')
+#         print("User create2")
+#         messages.get_messages(request)  # Clear old ones
+#         if password != confirm_password:
+#             messages.error(request, "Passwords do not match.")
+#             # return redirect('user_signup',{"post_data": request.POST})
+#             return render(request, "esign/signup.html", {"post_data": request.POST})
 
-        if User.objects.filter(email=email).exists():
-            messages.success(request, "User with this email already exists.")
-            return redirect('user_login')
-        print("User create")
-        # Create user (inactive until OTP verified)
-        user = User.objects.create_user(
-            username=email,
-            email=email,
-            password=password,
-            first_name=first_name,
-            last_name=last_name,
-            is_active=False
-        )
-        user.save()
+#         print("User create1")
 
-        # Generate OTP
-        otp = str(random.randint(100000, 999999))
+#         if User.objects.filter(email=email).exists():
+#             messages.success(request, "User with this email already exists.")
+#             return redirect('user_login')
+#         print("User create")
+#         # Create user (inactive until OTP verified)
+#         user = User.objects.create_user(
+#             username=email,
+#             email=email,
+#             password=password,
+#             first_name=first_name,
+#             last_name=last_name,
+#             is_active=False
+#         )
+#         user.save()
 
-        # Create Profile
-        profile = Profile.objects.create(user=user, phone=phone, email_otp=otp)
+#         # Generate OTP
+#         otp = str(random.randint(100000, 999999))
 
-        # Send OTP to email
-        send_mail(
-            subject='Your Email Verification OTP',
-            message=f'Your OTP for account verification is {otp}',
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-            fail_silently=False,
-        )
-        messages.get_messages(request)  # Clear old ones
-        messages.success(request, f"OTP sent to {email} {otp}. Please verify your email.")
-        return redirect('verify_otp', user_id=user.id)
+#         # Create Profile
+#         profile = Profile.objects.create(user=user, phone=phone, email_otp=otp)
 
-    return render(request, 'esign/signup.html')
+#         # Send OTP to email
+#         send_mail(
+#             subject='Your Email Verification OTP',
+#             message=f'Your OTP for account verification is {otp}',
+#             from_email=settings.DEFAULT_FROM_EMAIL,
+#             recipient_list=[email],
+#             fail_silently=False,
+#         )
+#         messages.get_messages(request)  # Clear old ones
+#         messages.success(request, f"OTP sent to {email} {otp}. Please verify your email.")
+#         return redirect('verify_otp', user_id=user.id)
+
+#     return render(request, 'esign/signup.html')
 
 
 
@@ -1706,6 +1827,15 @@ def index(request):
 
     def pct(x): 
         return round((x / total_docs * 100), 1) if total_docs else 0
+    from datetime import date
+
+    subscription = Subscription.objects.filter(user=request.user, status='active').first()
+    if subscription:
+        days_left = (subscription.end_date.date() - date.today()).days
+    else:
+        days_left = 0
+
+   
 
     data = {
         'filter_period': filter_period,
@@ -1725,6 +1855,8 @@ def index(request):
         'expiring_percent': pct(status_counts['expiring_soon']),
         'completion_rate': pct(status_counts['signed']),
         'declined_percent': pct(status_counts['declined']),
+        'subscription': subscription,
+        'days_left': days_left,
     }
 
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -1732,6 +1864,391 @@ def index(request):
 
     return render(request, 'esign/index-dinesh.html', data)
 
+
+import stripe
+stripe.api_key = settings.STRIPE_SECRET_KEY
+
+def checkout_view(request):
+    return render(request, "payments/checkout.html", {
+        "stripe_public_key": settings.STRIPE_PUBLIC_KEY
+    })
+
+
+# @csrf_exempt
+# def create_checkout_session(request):
+#     try:
+#         # Create Stripe checkout session
+#         checkout_session = stripe.checkout.Session.create(
+#             payment_method_types=['card'],
+#             line_items=[{
+#                 'price_data': {
+#                     'currency': 'usd',
+#                     'unit_amount': 2000,  # $20.00
+#                     'product_data': {
+#                         'name': 'Premium Plan',
+#                     },
+#                 },
+#                 'quantity': 1,
+#             }],
+#             mode='payment',
+#             success_url=request.build_absolute_uri(reverse('stripe_success')) + '?session_id={CHECKOUT_SESSION_ID}',
+#             cancel_url=request.build_absolute_uri(reverse('stripe_cancel')),
+#             metadata={
+#                 'plan': 'premium',  # Optional: add any metadata you need
+#                 'user_email': request.user.email if request.user.is_authenticated else 'guest@example.com',
+#             },
+#         )
+
+#         # Return the session id in response
+#         return JsonResponse({'id': checkout_session.id})
+
+#     except Exception as e:
+#         return JsonResponse({'error': str(e)})
+
+
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from django.urls import reverse
+import stripe, json
+
+@csrf_exempt
+def create_checkout_session(request):
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+        name = data.get('name', 'Premium Plan')
+        currency = data.get('currency', 'usd')
+        plan = data.get('plan', 'premium')
+        amount = int(data.get('amount', 2000))  # in cents
+        interval = data.get('interval', 'month')  # "month" or "year"
+        mode = data.get('mode', 'subscription')  # can be "payment" or "subscription"
+
+        # ✅ Create price with recurring interval if subscription
+        if mode == 'subscription':
+            price = stripe.Price.create(
+                unit_amount=amount,
+                currency=currency,
+                recurring={'interval': interval},
+                product_data={'name': name},
+            )
+        else:
+            price = stripe.Price.create(
+                unit_amount=amount,
+                currency=currency,
+                product_data={'name': name},
+            )
+
+        # ✅ Create checkout session
+        checkout_session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=[{
+                'price': price.id,
+                'quantity': 1,
+            }],
+            mode=mode,
+            success_url=request.build_absolute_uri(reverse('stripe_success')) + '?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url=request.build_absolute_uri(reverse('stripe_cancel')),
+            metadata={
+                'plan': plan,
+                'interval': interval,
+                'user_email': request.user.email if request.user.is_authenticated else 'guest@example.com',
+            },
+        )
+
+        # Return direct checkout URL
+        return JsonResponse({'checkout_url': checkout_session.url})
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
+
+
+# def success_view(request):
+#     """
+#     Called after Stripe redirects to success_url.
+#     Expects ?session_id=... in URL.
+#     Retrieves Stripe session, then creates user & subscription record.
+#     """
+#     session_id = request.GET.get('session_id')
+#     if not session_id:
+#         messages.error(request, "Missing session id.")
+#         return redirect('register')  # adjust to your registration page
+
+#     if not stripe.api_key:
+#         messages.error(request, "Stripe not configured on server.")
+#         return redirect('register')
+
+#     try:
+#         session = stripe.checkout.Session.retrieve(session_id, expand=['payment_intent', 'customer_details'])
+#     except stripe.error.StripeError as e:
+#         messages.error(request, f"Stripe error: {str(e)}")
+#         return redirect('register')
+
+#     # Get important values
+#     payment_intent = session.get('payment_intent') or (session.get('payment_intent') if isinstance(session, dict) else None)
+#     payment_intent_id = payment_intent.id if hasattr(payment_intent, 'id') else (payment_intent if isinstance(payment_intent, str) else None)
+#     payment_status = session.get('payment_status') or (payment_intent.status if hasattr(payment_intent, 'status') else None)
+#     customer_email = None
+#     try:
+#         customer_email = session.get('customer_details', {}).get('email') or session.get('customer_email')
+#     except Exception:
+#         customer_email = None
+
+#     # metadata (we should have set these when creating session)
+#     metadata = session.get('metadata') or {}
+#     plan = metadata.get('plan') or 'monthly'
+#     amount = None
+#     try:
+#         # get amount from line_items or amount_total if present
+#         amount = session.get('amount_total') or (session['display_items'][0]['amount'] if 'display_items' in session and session['display_items'] else None)
+#     except Exception:
+#         amount = None
+
+#     # If no email from Stripe, try metadata
+#     if not customer_email:
+#         customer_email = metadata.get('user_email')
+
+#     if not customer_email:
+#         messages.error(request, "Could not determine customer email from Stripe session.")
+#         return redirect('register')
+
+#     # Create or get user
+#     user, created = User.objects.get_or_create(
+#         email=customer_email,
+#         defaults={
+#             'username': customer_email,  # adjust if your User model uses different field
+#             'first_name': metadata.get('user_name', customer_email.split('@')[0]),
+#         }
+#     )
+#     # If user was just created, set password to default
+#     if created:
+#         user.set_password("12345")
+#         user.save()
+ 
+#     session = stripe.checkout.Session.retrieve(session_id)
+
+#     # Get PaymentIntent to check payment status
+#     payment_intent_id = session.payment_intent
+#     payment_intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+#     payment_status = payment_intent.status  # 'succeeded', 'requires_payment_method', etc.
+
+#     # Create or update subscription record
+#     subscription, sub_created = Subscription.objects.get_or_create(
+#         stripe_checkout_session_id=session_id,
+#         defaults={
+#             'user': user,
+#             'plan': plan,
+#             'status': Subscription.STATUS_ACTIVE if payment_status in ('paid', 'succeeded', 'complete') else Subscription.STATUS_PENDING,
+#             'stripe_payment_intent_id': payment_intent_id,
+#             'stripe_payment_status': payment_status,
+#             'amount_cents': session.amount_total if hasattr(session, 'amount_total') else None,
+#             'currency': session.currency if hasattr(session, 'currency') else 'usd',
+#         }
+#     )
+
+#     # If it already existed, update fields
+#     if not sub_created:
+#         subscription.user = user
+#         subscription.stripe_payment_intent_id = payment_intent_id
+#         subscription.stripe_payment_status = payment_status
+#         subscription.amount_cents = session.get('amount_total') or subscription.amount_cents
+#         subscription.currency = session.get('currency') or subscription.currency
+#         subscription.plan = plan or subscription.plan
+#         # set active dates if payment succeeded
+#         if payment_status in ('paid', 'succeeded', 'complete'):
+#             subscription.set_active_dates()
+#         else:
+#             subscription.status = Subscription.STATUS_PENDING
+#             subscription.save()
+#     else:
+#         # For new subscription created above, set active dates if paid
+#         if subscription.status == Subscription.STATUS_ACTIVE:
+#             subscription.set_active_dates()
+
+#     login_url = request.build_absolute_uri(f"/login/?email={customer_email}")
+#     subject = "Your Subscription is Active!"
+#     message = f"""
+#     Hi {customer_email},
+
+#     Your subscription ({plan}) is now active.
+
+#     Login Details:
+#     Email: {customer_email}
+#     Password: 12345
+
+#     Click the link below to login:
+#     {login_url}
+
+#     Thank you!
+#     """
+#     send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [customer_email], fail_silently=False)
+
+#     # OPTIONAL: if you want to send the login email here, do it (not included).
+#     # Now attempt to login the user immediately
+#     try:
+#         # authenticate by checking password - using default password
+#         # If your AUTHENTICATION_BACKENDS require username, ensure username==email or adapt.
+#         login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+#     except Exception:
+#         # fallback: if login fails, just redirect to login page
+#         pass
+
+#     messages.success(request, "Payment successful. Your account was created.")
+#     return render(request, "payments/success.html")
+
+#     # return redirect(reverse('dashboard'))  # change to your dashboard route
+
+
+
+
+
+@csrf_exempt
+def success_view(request):
+    """
+    Called after Stripe redirects to success_url.
+    Expects ?session_id=... in URL.
+    Retrieves Stripe session, then creates user & subscription record.
+    """
+    session_id = request.GET.get('session_id')
+    if not session_id:
+        messages.error(request, "Missing session id.")
+        return redirect('register')
+
+    try:
+        session = stripe.checkout.Session.retrieve(session_id, expand=['payment_intent', 'customer_details'])
+    except stripe.error.StripeError as e:
+        messages.error(request, f"Stripe error: {str(e)}")
+        return redirect('register')
+
+    # Get customer email
+    customer_email = (session.customer_details.email 
+                      if hasattr(session, 'customer_details') and session.customer_details 
+                      else session.customer_email or session.metadata.get('user_email'))
+    if not customer_email:
+        messages.error(request, "Could not determine customer email from Stripe session.")
+        return redirect('register')
+
+    # Get plan & amount from metadata
+    plan = session.metadata.get('plan', 'monthly')
+    interval = session.metadata.get('interval', 'month')
+    amount_cents = getattr(session, 'amount_total', None)
+    currency = getattr(session, 'currency', 'usd')
+
+    # Create or get user
+    user, created = User.objects.get_or_create(
+        email=customer_email,
+        defaults={
+            'username': customer_email,
+            'first_name': session.metadata.get('user_name', customer_email.split('@')[0]),
+        }
+    )
+    if created:
+        user.set_password("12345")
+        user.save()
+
+    # Get PaymentIntent to check payment status
+    payment_intent_id = getattr(session, 'payment_intent', None)
+    payment_intent = stripe.PaymentIntent.retrieve(payment_intent_id) if payment_intent_id else None
+    payment_status = getattr(payment_intent, 'status', 'pending')
+
+    # Create or update subscription record
+    subscription, sub_created = Subscription.objects.get_or_create(
+        stripe_checkout_session_id=session_id,
+        defaults={
+            'user': user,
+            'plan': plan,
+            'status': Subscription.STATUS_ACTIVE if payment_status in ('succeeded', 'paid', 'complete') else Subscription.STATUS_PENDING,
+            'stripe_payment_intent_id': payment_intent_id,
+            'stripe_payment_status': payment_status,
+            'amount_cents': amount_cents,
+            'currency': currency,
+        }
+    )
+
+    if not sub_created:
+        subscription.user = user
+        subscription.plan = plan
+        subscription.stripe_payment_intent_id = payment_intent_id
+        subscription.stripe_payment_status = payment_status
+        subscription.amount_cents = amount_cents or subscription.amount_cents
+        subscription.currency = currency or subscription.currency
+        if payment_status in ('succeeded', 'paid', 'complete'):
+            subscription.status = Subscription.STATUS_ACTIVE
+            subscription.set_active_dates()
+        else:
+            subscription.status = Subscription.STATUS_PENDING
+        subscription.save()
+    else:
+        if subscription.status == Subscription.STATUS_ACTIVE:
+            subscription.set_active_dates()
+
+    # Send login email
+    # login_url = request.build_absolute_uri(f"/login/?email={customer_email}")
+    # subject = "Your Subscription is Active!"
+    # message = f"""
+    # Hi {customer_email},
+
+    # Your subscription ({plan}) is now active.
+
+    # Login Details:
+    # Email: {customer_email}
+    # Password: 12345
+
+    # Click the link below to login:
+    # {login_url}
+
+    # Thank you!
+    # """
+    # send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [customer_email], fail_silently=False)
+    login_url = request.build_absolute_uri(f"/login/?email={customer_email}")
+
+    # Send HTML email using EmailMessage
+    subject = "Your Subscription is Active!"
+    html_content = render_to_string("payments/subscription_success_email.html", {
+        "customer_email": customer_email,
+        "plan": plan,
+        "login_url": login_url,
+    })
+
+    email = EmailMessage(
+        subject=subject,
+        body=html_content,  # HTML content
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=[customer_email],
+    )
+    email.content_subtype = "html"  # Important!
+    email.send(fail_silently=False)
+
+    # Log user in automatically
+    try:
+        login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+    except Exception:
+        pass
+
+    messages.success(request, "Payment successful. Your account was created.")
+    return render(request, "payments/success.html")
+
+
+def cancel_view(request):
+    return render(request, "payments/cancel.html")
+
+
+@csrf_exempt
+def stripe_webhook(request):
+    payload = request.body
+    sig_header = request.META['HTTP_STRIPE_SIGNATURE']
+    endpoint_secret = "your_webhook_secret"
+
+    try:
+        event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
+    except (ValueError, stripe.error.SignatureVerificationError):
+        return HttpResponse(status=400)
+
+    if event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+        print("Payment successful for:", session['customer_email'])
+
+    return HttpResponse(status=200)
     
 def buy_plain(request):
     if request.method == "GET":
@@ -1743,3 +2260,375 @@ def admin_view(request):
         return render(request,'admin/admin_view.html')
 
         
+def signup_basic(request):
+    if request.method == "POST":
+        email = request.POST.get("userEmail")
+
+        if email:
+            # user = User.objects.filter(email=email, is_active=True).first()
+
+            user = User.objects.filter(email=email).first()
+
+            if user and user.is_active:
+                # User already active → cannot signup again
+                messages.success(request, "Email already registered. Please log in instead.")
+                request.session["signup_user_id"] = user.id  # optional
+                return redirect('signup_basic')
+
+            # If user doesn't exist → create new one
+            otp = get_random_string(6, allowed_chars="0123456789")
+            # username = email.split('@')[0] + get_random_string(4)  # e.g. 'john1234'
+
+            # user = User.objects.create(
+            #     username=username,
+            #     email=email
+            # )
+            if not user:
+                user = User.objects.create(
+                    username=email,
+                    email=email,
+                    is_active=False
+                )
+            # Store info in session
+            request.session["signup_email"] = email
+            request.session["email_otp"] = otp
+            request.session["signup_user_id"] = user.id
+          
+            # Send OTP mail
+            # send_mail(
+            #     "Your OTP Code",
+            #     f"Your OTP code is {otp}",
+            #     "no-reply@yourdomain.com",
+            #     [email],
+            #     fail_silently=False,
+            # )
+            name = email.split('@')[0]
+
+            html_content = render_to_string('esign/otp_email.html', {
+                
+                'EXPIRY_MINUTES': "10",
+                "name":name,
+                'otp': otp,  # if you want to include OTP
+            })
+
+            # Create EmailMessage
+            email1 = EmailMessage(
+                subject="Your OTP Code",
+                body=html_content,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[email]         # recipient email
+            )
+            email1.content_subtype = "html"
+
+            # Send email
+            email1.send(fail_silently=False)
+
+
+
+            messages.success(request, f"An OTP has been sent to {email}. Please check your email.")
+            return redirect(f"{reverse('signup_multi_step')}?email={email}")
+
+
+        else:
+            messages.error(request, "Please enter a valid email.")
+
+    return render(request, "esign/signup.html")
+
+def send_email_otp(email, otp):
+    subject = "Your OTP for EazeeSign"
+    message = f"Hello,\n\nYour one-time password (OTP) is: {otp}\n\nPlease do not share it with anyone."
+    from_email = settings.DEFAULT_FROM_EMAIL  # Make sure this is set in settings.py
+    recipient_list = [email]
+
+    try:
+        send_mail(
+            subject,
+            message,
+            from_email,
+            recipient_list,
+            fail_silently=False,  # Set to True if you don't want errors to raise
+        )
+        print(f"OTP sent to {email}")
+    except Exception as e:
+        print(f"Error sending OTP: {e}")
+
+def send_sms_otp(phone, otp):
+    # Replace with real SMS sending logic
+    print(f"Send SMS OTP {otp} to {phone}")
+from django.contrib.auth.hashers import make_password , check_password
+
+def signup_multi_step(request):
+    step = int(request.POST.get('step', 0)) if request.method == 'POST' else 0
+    email = request.GET.get('email') or request.session.get('signup_email', '')
+    context = {'step': step,'email_prefill':email}
+    if request.method == 'POST':
+        if step == 1:
+            print("Proper working")
+            # Step 0: Collect basic info
+            # email = request.POST.get('userEmail')
+            phone = request.POST.get('userPhone')
+            context['mobile'] = phone
+            request.session["signup_phone"] = phone
+            first_name = request.POST.get('username')
+            last_name = request.POST.get('userLastName')
+            print("email",email)
+            try:
+                user = User.objects.get(email=email)  # email ke base pe user fetch karna
+                print("user",user)
+                user.first_name = first_name
+                user.last_name = last_name
+
+                # agar phone field User model me nahi hai to ye optional hai:
+                if hasattr(user, 'phone'):
+                    user.phone = phone
+
+                user.save()
+                messages.success(request, "User details updated successfully!")
+
+                # user mil gaya to hi session me id save karo
+                request.session['signup_user_id'] = user.id
+
+            except User.DoesNotExist:
+                print("catch")
+                messages.error(request, "User not found with this email.")
+            context['step'] = 1
+            return render(request, 'esign/signup_steps.html', context)
+        
+        elif step == 2:
+            # Step 1: Verify Email OTP
+            print("ojhbvbhjklkjn")
+            otp = request.POST.get('emailVerificationCode')
+            user_id = request.session.get('signup_user_id')
+            user_otp = request.session.get('email_otp')
+            print("user_id",user_id)
+            user = User.objects.get(id=user_id)
+            
+            if str(user_otp) == str(otp):
+                user.is_email_verified = True
+                user.save()
+                context['step'] = 3
+            else:
+                context['step'] = 1
+                messages.error(request, f"Invalid email OTP. You entered: {user_otp} {otp}")
+            
+            return render(request, 'esign/signup_steps.html', context)
+        
+        elif step == 4:
+            # Step 2: Verify Phone OTP
+            otp = request.POST.get('phoneVerificationCode')
+            user_id = request.session.get('signup_user_id')
+            phone_otp = request.session.get('phone_otp')
+            user = User.objects.get(id=user_id)
+            
+            if "123456" == otp:
+                user.is_phone_verified = True
+                user.save()
+                context['step'] = 4
+            else:
+                messages.error(request, "Invalid phone OTP.")
+                context['step'] = 3
+
+            
+            return render(request, 'esign/signup_steps.html', context)
+        
+        elif step == 5:
+            # Step 3: Set Password
+            password = request.POST.get('userPassword')
+            user_id = request.session.get('signup_user_id')
+            user = User.objects.get(id=user_id)
+            
+            # Set hashed password
+            user.password = make_password(password)
+            user.is_active = True  # ✅ Make user active
+            user.save()
+            
+            # Create free trial subscription
+            trial_days = 30  # free trial duration
+            Subscription.objects.create(
+                user=user,
+                plan=Subscription.PLAN_FREE_TRIAL,
+                status=Subscription.STATUS_ACTIVE,
+                start_date=timezone.now(),
+                end_date=timezone.now() + timedelta(days=trial_days),
+                amount_cents=0,
+                currency='usd',
+            )
+
+            # Auto-login user
+            login(request, user)
+            
+            # Clean session
+            del request.session['signup_user_id']
+            
+            messages.success(request, "Signup completed successfully!")
+            
+            # Redirect to index/dashboard
+            return redirect('index')
+
+    return render(request, 'esign/signup_steps.html', context)
+
+import requests
+
+def send_mobile_otp(request):
+    if request.method == "POST":
+        # Use posted phone number, fallback hardcoded if needed
+        phone = request.POST.get("phone")
+        if not phone:
+            return JsonResponse({"success": False, "message": "Phone number is required."})
+
+        # Generate 6-digit OTP
+        otp = random.randint(100000, 999999)
+
+        # Store OTP in session for verification
+        request.session['mobile_otp'] = otp
+        request.session['mobile_number'] = phone
+
+        # ✅ Sinch new SMS endpoint
+        url = f"https://sms.api.sinch.com/xms/v1/{settings.SINCH_APPID}/batches"
+        auth = (settings.SINCH_USERID, settings.SINCH_PASSWORD)
+
+        payload = {
+            "from": settings.SINCH_APPID,
+            "to": [str(phone)],
+            "body": f"Your OTP code is {otp}"
+        }
+
+        try:
+            response = requests.post(url, json=payload, auth=auth, timeout=10)
+            response.raise_for_status()
+            return JsonResponse({"success": True, "message": "OTP sent successfully!"})
+        except requests.exceptions.RequestException as e:
+            # Detailed error for debugging
+            return JsonResponse({"success": False, "message": f"Failed to send OTP. {str(e)}"})
+
+    return JsonResponse({"success": False, "message": "Invalid request."})
+
+
+
+def user_login1(request):
+    step = int(request.POST.get('step', 0)) if request.method == 'POST' else 0
+    email = request.POST.get('email') or request.session.get('login_email', '')
+    context = {'stepInput': step, 'email_prefill': email}
+    print(context)
+    if request.method == 'POST':
+        # 🧩 Step 0 → User entered email
+        if step == 0:
+            email = request.POST.get('email')
+            try:
+                user = User.objects.get(email=email)
+                if user and user.is_active:
+                    context['stepInput'] = 2  # Move to OTP verification step
+                    return render(request, 'esign/login.html', context)
+                else:
+                    messages.error(request, "No user found with this email.")
+                    context['stepInput'] = 0
+                    return render(request, 'esign/login.html', context)
+            except User.DoesNotExist:
+                messages.error(request, "No user found with this email.")
+                context['stepInput'] = 0
+                return render(request, 'esign/login.html', context)
+
+        
+            context['stepInput'] = 2  # Move to OTP verification step
+            return render(request, 'esign/login.html', context)
+
+        # 🧩 Step 1 → Verify OTP
+        elif step == 1:
+            # email = request.session.get('login_email')
+            password = request.POST.get('password')
+            print("password",password,"email",email)
+            # print("password",password)
+            if not email or not password:
+                messages.error(request, "Session expired or password missing.")
+                context['stepInput'] = 0
+                return render(request, 'esign/login.html', context)
+
+            user = authenticate(request, username=email, password=password)
+            if user:
+                # Password correct, move to next step
+                context['stepInput'] = 3
+                phone = getattr(user, 'phone', '')
+                context['phone_prefill'] = phone[-4:] if phone else ''
+                messages.success(request, "Password verified! Please select verification method.")
+                return render(request, 'esign/login.html', context)
+            else:
+                # Password incorrect, stay on step 2
+                messages.success(request, "Incorrect password. Try again.")
+                context['stepInput'] = 3
+                # context['phone_prefill'] = user.phone
+                return render(request, 'esign/login.html', context)
+
+        # 🧩 Step 2 → Password login fallback
+        # elif step == 2:
+        #     email = request.POST.get('email') or request.session.get('login_email')
+        #     password = request.POST.get('password')
+
+        #     user = authenticate(request, username=email, password=password)
+        #     if user:
+        #         login(request, user)
+        #         messages.success(request, "Login successful.")
+        #         return redirect('dashboard')
+        #     else:
+        #         messages.error(request, "Invalid email or password.")
+        #         context['stepInput'] = 2
+        #         return render(request, 'esign/login.html', context)
+
+        # 🧩 Step 3 → Optional: Phone/email verification choice, etc.
+        elif step == 2:
+            # Example for choosing delivery method or extra verification
+            method = request.POST.get('otpMethod')
+            print("method",method)
+            if method not in ['sms', 'call', 'email']:
+                messages.success(request, "Please select a verification method.")
+                context['stepInput'] = 3
+            else:
+                messages.success(request, f"You chose {method.upper()} for verification.")
+                context['stepInput'] = 4  # For example, back to OTP step
+                otp = random.randint(100000, 999999)
+                request.session["login_otp"] = otp
+                if request.user.is_authenticated:
+                    phone = getattr(request.user, 'phone', '')
+                    context['phone_prefill'] = phone[-4:] if phone else ''
+                else:
+                    context['phone_prefill'] = ''
+
+
+            return render(request, 'esign/login.html', context)
+        elif step == 3:
+            # Step 4 → Verify OTP from SMS/Email
+            login_otp = request.POST.get('loginOtp')
+            session_login_otp = request.session.get('login_otp')  # OTP stored in session from step 0 or step 3
+            # session_email = request.session.get('login_email')
+
+            if not email or not session_login_otp:
+                messages.error(request, "Session expired. Please start again.")
+                context['stepInput'] = 0
+                return redirect('user_login')
+
+            if str(login_otp) == str(session_login_otp):
+                try:
+                    user = User.objects.get(email=email)
+                except User.DoesNotExist:
+                    context['stepInput'] = 0
+                    messages.error(request, "User not found.")
+                    return redirect('user_login')
+                
+
+                # Login the user
+                login(request, user)
+                messages.success(request, "Login successful via OTP!")
+    
+                # Clear session OTP
+                request.session.pop('login_email', None)
+                request.session.pop('login_otp', None)
+
+                return redirect('index')
+            else:
+                messages.error(request, "Invalid OTP. Please try again. "+str(session_login_otp))
+                context['stepInput'] = 4
+                # context['step'] = 4  # Stay on the same step
+                return render(request, 'esign/login.html', context)
+
+
+    # GET request → default page
+    return render(request, 'esign/login.html', context)

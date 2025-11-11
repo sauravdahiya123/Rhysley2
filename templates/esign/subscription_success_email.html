@@ -1,0 +1,83 @@
+{% extends "esign/base_email.html" %}
+{% load static %}
+{% block content %}
+
+  <!-- Preheader spacer -->
+  <div style="display: none; max-height: 0px; overflow: hidden; mso-hide: all;">
+    &nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;
+  </div>
+
+  <!-- Outer wrapper -->
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin: 0; padding: 0; background-color: #f3f4f6;">
+    <tr>
+      <td align="center" style="padding: 24px 10px;">
+        
+        <!-- Main container -->
+        <table class="container" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; background-color: #ffffff; margin: 0 auto;">
+          
+          <!-- Header -->
+          <tr>
+            <td style="background-color: #0f172a; padding: 24px 28px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td width="50%" valign="middle">
+                    <img src="{% static 'assets/images/footer-logo-small.png' %}" alt="logo-large" style="height: 36px;">
+                  </td>
+                  <td width="50%" valign="middle" align="right" style="color: #ffffff; font-size: 12px; opacity: 0.8;">
+                    Subscription Notice
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding: 32px 28px;">
+              
+              <!-- Greeting -->
+              <h4 style="font-size: 26px; font-weight: 700; color: #0f172a; padding-bottom: 12px;">Hi {{ customer_email }},</h4>
+
+              <!-- Message -->
+              <p style="font-size: 16px; color: #374151; line-height: 1.6; margin-bottom: 24px;">
+                Your subscription <strong>{{ plan }}</strong> is now active.
+              </p>
+
+              <!-- Login Info Box -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8fafc; border-radius: 8px; padding: 20px;">
+                <tr>
+                  <td style="text-align: center;">
+                    <p style="font-family: 'Courier New', monospace; font-size: 18px; font-weight: bold; color: #0f172a; margin-bottom: 8px;">
+                      Login Details
+                    </p>
+                    <p style="font-size: 16px; color: #0f172a; margin: 4px 0;">Email: {{ customer_email }}</p>
+                    <p style="font-size: 16px; color: #0f172a; margin: 4px 0;">Password: 12345</p>
+                    <a href="{{ login_url }}" style="display: inline-block; margin-top: 12px; background-color: #2563eb; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-weight: 600;">
+                      Login Now
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Info Text -->
+              <p style="font-size: 14px; color: #6b7280; line-height: 1.7; margin-top: 24px;">
+                Thank you for subscribing to EazeeSign! If you have any questions or need assistance, please <a href="#" style="color: #2563eb; text-decoration: none;">contact our support team</a>.
+              </p>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="background-color: #f8fafc; padding: 20px 28px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 13px;">
+              <p>Copyright © EazeeSign 2025 All rights reserved.</p>
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
+{% endblock %}
