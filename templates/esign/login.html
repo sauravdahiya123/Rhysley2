@@ -9,15 +9,33 @@
           
 
           <!-- ✅ Success & general error messages -->
-          {% if messages %}
-            {% for message in messages %}
-              {% if message.tags == 'success' %}
-                <small  id="msgg" class="text-success fw-semibold d-block text-center mb-2">{{ message }}</small>
-              {% elif message.tags == 'error'  %}
-                <small  id="msgg" class="text-danger fw-semibold d-block text-center mb-2">{{ message }}</small>
-              {% endif %}
-            {% endfor %}
-          {% endif %}
+       {% if messages %}
+  {% for message in messages %}
+    {% if message.tags == 'success' %}
+      <small id="msgg" class="flash-msg text-success fw-semibold d-block text-center mb-2">{{ message }}</small>
+    {% elif message.tags == 'info' %}
+      <small id="msgg" class="flash-msg text-info fw-semibold d-block text-center mb-2">{{ message }}</small>
+    {% elif message.tags == 'error' %}
+      <small id="msgg" class="flash-msg text-danger fw-semibold d-block text-center mb-2">{{ message }}</small>
+    {% endif %}
+  {% endfor %}
+{% endif %}
+
+
+<script>
+// Select all flash messages
+const flashMessages = document.querySelectorAll('.flash-msg');
+
+// Hide after 5 seconds (5000ms)
+flashMessages.forEach(msg => {
+  setTimeout(() => {
+    msg.style.transition = 'opacity 0.5s ease';
+    msg.style.opacity = '0';
+    // Optional: remove from DOM after fade out
+    setTimeout(() => msg.remove(), 500);
+  }, 5000);
+});
+</script>
         <p id="otpStatus" class="text-center mt-2 fw-semibold small"></p>
 
          <form method="post" id="loginForm">
@@ -54,11 +72,14 @@
             pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
 
         >
+          <small id="emailError" class="text-danger mt-1 d-block"></small>
+
       </div>
  <script>
 document.addEventListener("DOMContentLoaded", function() {
     const loginForm = document.getElementById('loginForm');
     const stepInput = document.getElementById('stepInput');
+    const emailError = document.getElementById('emailError');
 
     // Submit the form with the current step
     window.goToLoginStep = function(stepIndex) {
@@ -79,7 +100,9 @@ document.addEventListener("DOMContentLoaded", function() {
               if (input.type === 'email') {
                     if (!emailPattern.test(input.value.trim())) {
                         valid = false;
-                        alert("Please enter a valid email");
+                        // alert("Please enter a valid email");
+                            emailError.textContent = "Please enter a valid email";
+
                         input.focus();
                         return;
                     }
@@ -156,20 +179,48 @@ document.addEventListener("DOMContentLoaded", function() {
     <!-- Password Field -->
     <div class="mb-3 position-relative" id="passwordField">
       <label class="form-label">Password <span class="text-danger">*</span></label>
+  
+
       <input
-        type="password"
-        id="password"
-        name="password"
-        class="form-control"
-        placeholder="Enter password" required 
-         pattern="^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*?&]{6,}$"
-      >
+  type="password"
+  name="password"
+  id="password"
+  class="form-control"
+  placeholder="Password"
+  required
+  minlength="8"
+  pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[@#]).{8,}$"
+  title="Password must be at least 8 characters long and include at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character (@ or #)">
+
+
+
       <i
         class="fa fa-eye position-absolute"
         id="togglePassword" 
         style="right:15px; top:38px; cursor:pointer;"
       ></i>
-        <small id="passwordError" class="text-danger d-block mt-1 fw-semibold"></small>
+
+        <small id="passwordHelp" class="text-danger mt-1 d-block"></small>
+<script>
+const passwordInput = document.getElementById('password');
+const passwordHelp = document.getElementById('passwordHelp');
+
+passwordInput.addEventListener('input', function() {
+  const value = this.value;
+  const minLength = 8;
+  const hasUpper = /[A-Z]/.test(value);
+  const hasLower = /[a-z]/.test(value);
+  const hasNumber = /[0-9]/.test(value);
+  const hasSymbol = /[@#]/.test(value);
+
+  if(value.length < minLength || !hasUpper || !hasLower || !hasNumber || !hasSymbol){
+    passwordHelp.textContent = 'Password must be at least 8 characters long and include 1 uppercase, 1 lowercase, 1 number, and 1 symbol (@ or #).';
+  } else {
+    passwordHelp.textContent = '';
+  }
+});
+</script>
+
 
     </div>
 
@@ -225,9 +276,9 @@ document.addEventListener("DOMContentLoaded", function() {
       <button type="button" name="login" value="1" class="btn btn-primary w-100 mb-2" onclick="goToLoginStep(3)">
         Send Code
       </button>
-      <p>
+      <!-- <p>
         <button type="button" class="btn btn-outline-secondary w-100" onclick="goToLoginStep(4)">Choose Another Method</button>
-      </p>
+      </p> -->
     </div>
 
     <!-- Error box (for JS validation) -->
@@ -255,11 +306,44 @@ document.addEventListener("DOMContentLoaded", function() {
     
     <div class="mb-3">
         <label class="form-label">Verification Code <span class="text-danger">*</span></label>
-        <input type="text" name="loginOtp" id="loginOtp"  pattern="\d{6}" class="form-control" maxlength="6" placeholder="123456" required>
+  <input type="text"
+         name="loginOtp"
+         id="loginOtp"
+         class="form-control"
+         placeholder="123456"
+         required
+         pattern="\d{6}"      
+         maxlength="6"
+         minlength="6"    title="Please enter exactly 6 digits"
+         inputmode="numeric">
+  <small id="otpError" class="text-danger mt-1 d-block"></small>
+
+<script>
+const otpInput = document.getElementById('loginOtp');
+const otpError = document.getElementById('otpError');
+
+otpInput.addEventListener('input', function() {
+  // 1️⃣ Only numbers
+  this.value = this.value.replace(/[^0-9]/g, '');
+
+  // 2️⃣ Enforce max length
+  if(this.value.length > 6) this.value = this.value.slice(0,6);
+
+  // 3️⃣ Live feedback
+  if(this.value.length < 6){
+    otpError.textContent = `Enter 6 digits (${this.value.length}/6)`;
+  } else {
+    otpError.textContent = '';
+  }
+});
+
+</script>
+
+     
       </div>
 
       <div class="mb-3 form-check">
-        <input type="checkbox" class="form-check-input" id="userConsentCheckBox" required="">
+        <input type="checkbox" class="form-check-input" id="userConsentCheckBox" >
         <label class="form-check-label mb-3" for="userConsentCheckBox">Remember this device</label>
       </div>
 

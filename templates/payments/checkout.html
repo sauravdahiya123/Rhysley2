@@ -1,30 +1,57 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Checkout</title>
-  <script src="https://js.stripe.com/v3/"></script>
+    <title>Checkout</title>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
 <body>
-  <h2>Pay $20 for Premium Plan</h2>
-  <button id="checkout-button">Pay Now</button>
 
-  <script>
-    const stripe = Stripe("{{ stripe_public_key }}");
+<h2>Pay ₹20 for Premium Plan</h2>
+<button id="pay-button">Pay Now</button>
 
-    document.getElementById("checkout-button").addEventListener("click", function() {
-      fetch("/create-checkout-session/", {
+<script>
+document.getElementById("pay-button").addEventListener("click", function () {
+
+    fetch("/create-checkout-session/", {
         method: "POST",
-      })
-      .then(response => response.json())
-      .then(session => {
-        return stripe.redirectToCheckout({ sessionId: session.id });
-      })
-      .then(result => {
-        if (result.error) {
-          alert(result.error.message);
-        }
-      });
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            name: "Premium Plan",
+            amount: 10,     // in rupees
+            currency: "INR",
+            plan: "premium",
+            interval: "month",
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+
+        var options = {
+            "key": data.key_id,
+            "amount": data.amount,
+            "currency": data.currency,
+            "name": "Premium Plan",
+            "order_id": data.order_id,
+            "handler": function (response){
+                window.location.href = data.success_url + "?payment_id=" + response.razorpay_payment_id;
+            },
+            "modal": {
+                "ondismiss": function(){
+                    window.location.href = data.cancel_url;
+                }
+            },
+            "theme": {
+                "color": "#3399cc"
+            }
+        };
+
+        var rzp = new Razorpay(options);
+        rzp.open();
     });
-  </script>
+});
+</script>
+
 </body>
 </html>

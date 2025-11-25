@@ -1,0 +1,104 @@
+{% extends "esign/base_email.html" %}
+{% load static %}
+{% block content %}
+
+<!-- Hidden preheader text -->
+<div style="display:none!important; font-size:1px; color:#f3f3f3; line-height:1px; max-height:0px; max-width:0px; opacity:0; overflow:hidden; mso-hide:all;">
+  Use this code to verify your account — expires in {{EXPIRY_MINUTES}} minutes.
+</div>
+
+<!-- Outer wrapper -->
+<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin:0; padding:0; background:#f3f4f6;">
+  <tr>
+    <td align="center" style="padding:24px 10px;">
+
+      <!-- Main container -->
+      <!--[if mso]>
+      <table width="600" cellpadding="0" cellspacing="0" border="0">
+      <tr><td>
+      <![endif]-->
+
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"
+        style="max-width:600px; background:#ffffff; margin:0 auto;">
+
+        <!-- Header -->
+        <tr>
+          <td style="padding:25px 25px;">
+
+            <img src="https://app.eazeesign.com/static/assets/images/eazee-sign-logo-final-small.png"
+                 width="187" height="40" alt="EazeeSign Logo" border="0"
+                 style="display:block; outline:none; text-decoration:none; -ms-interpolation-mode:bicubic;">
+          </td>
+        </tr>
+
+        <!-- Body -->
+        <tr>
+          <td style="padding:25px; background:#6500ff;">
+
+            <!-- Title -->
+            <p style="font-size:26px; font-weight:400; color:#ffffff; margin:0 0 12px 0; line-height:1.3;">
+              Hello {{name}},
+            </p>
+
+            <p style="font-size:14px; color:#ffffff; margin:0; line-height:1.4;">
+              You recently requested to reset the password for your EazeeSign account.
+            </p>
+
+            <p style="font-size:14px; color:#ffffff; margin:0 0 24px 0; line-height:1.4;">
+              Please use the following one-time password (OTP) to proceed.
+            </p>
+
+            <!-- Outlook-safe OTP box -->
+            <!--[if mso]>
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td align="center" style="background:#f8fafc; border:2px solid #e5e7eb; padding:20px 32px;">
+                  <span style="font-family:Courier New, monospace; font-size:32px; letter-spacing:6px; color:#0f172a;">
+                    {{otp}}
+                  </span>
+                </td>
+              </tr>
+            </table>
+            <![endif]-->
+
+            <!--![if !mso]><!-->
+            <p style="text-align:left; margin:0 0 24px 0;">
+              <span style="font-family:'Courier New', monospace; font-size:40px; font-weight:700; color:#ffffff;">
+                {{otp}}
+              </span>
+            </p>
+            <!--<![endif]-->
+
+            <p style="font-size:14px; color:#ffffff; line-height:1.6; margin:0 0 16px 0;">
+              This code is valid for {{EXPIRY_MINUTES}} minutes.
+            </p>
+
+            <p style="font-size:14px; color:#ffffff; line-height:1.7; margin:0 0 16px 0;">
+              If you did not request a password reset, simply ignore this email.
+            </p>
+
+            <p style="font-size:14px; color:#ffffff; line-height:1.5; margin:0;">
+              Thank you<br>The EazeeSign Team
+            </p>
+
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td align="center" style="background:#f8fafc; padding:20px 28px; border-top:1px solid #e5e7eb;">
+            <p style="margin:0; color:#6b7280; font-size:13px; line-height:1.6;">
+              Copyright © EazeeSign 2025 All rights reserved.
+            </p>
+          </td>
+        </tr>
+
+      </table>
+
+      <!--[if mso]></td></tr></table><![endif]-->
+
+    </td>
+  </tr>
+</table>
+
+{% endblock %}

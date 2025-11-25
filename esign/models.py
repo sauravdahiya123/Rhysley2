@@ -36,6 +36,8 @@ def sig_image_path(instance, filename):
     return f'signatures/{safe_email}/{uuid.uuid4().hex}.png'
 
 
+
+
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     phone = models.CharField(max_length=15, blank=True, null=True)
@@ -91,6 +93,7 @@ class Document(models.Model):
 class Signature(models.Model):
     email = models.EmailField()  # now signature is linked to email
     image = models.ImageField(upload_to=sig_image_path)
+    initials_image = models.ImageField(upload_to=sig_image_path, blank=True, null=True)  # new field
     name = models.CharField(max_length=150, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     def __str__(self):

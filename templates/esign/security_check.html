@@ -1,4 +1,4 @@
-{% extends "esign/base.html" %}
+{% extends 'esign/base_login.html' %}
 {% block content %}
 
 <!-- Modal Trigger (Hidden, auto open) -->
@@ -11,7 +11,7 @@
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="tokenModalLabel">Enter Security Token</h5>
+        <h5 class="modal-title" id="tokenModalLabel">Enter Access Code</h5>
       </div>
       <div class="modal-body">
         
@@ -22,7 +22,7 @@
         <form method="post">
           {% csrf_token %}
           <div class="mb-3">
-            <label for="security_token" class="form-label">Security Token</label>
+            <label for="security_token" class="form-label">Access Code</label>
             <input type="password" class="form-control" id="security_token" name="security_token" required>
           </div>
           <button type="submit" class="btn btn-primary">Verify & Continue</button>

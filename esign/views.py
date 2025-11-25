@@ -34,7 +34,7 @@ from django.core.paginator import Paginator
 from django.db.models import Q ,Count
 import random
 from django.contrib import auth
-from esign.utils.email_utils import get_from_email
+from esign.utils.email_utils import send_email_safe
 
 def check(request):
     return redirect('')
@@ -76,33 +76,31 @@ def forgot_password(request):
                 request.session['otp_expires'] = str(timezone.now() + datetime.timedelta(minutes=10))
 
                 # Send OTP email
-                send_mail(
-                    subject="Password Reset OTP",
-                    message=f"Your password reset code is {otp}. It will expire in 10 minutes.",
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[email],
-                    fail_silently=False,
-                )
-                name = email.split('@')[0]
-                html_content = render_to_string('esign/otp_email.html', {
-                
-                'EXPIRY_MINUTES': "10",
-                "name":name,
-                'otp': otp,  # if you want to include OTP
-                })
+              
+                name = user.first_name+" "+user.last_name
+                html_content = render_to_string('mails/otp_email.html', {
+                    
+                    'EXPIRY_MINUTES': "10",
+                    "name":name,
+                    'otp': otp,  # if you want to include OTP
+                    })
 
-                # Create EmailMessage
-                email1 = EmailMessage(
-                    subject="Password Reset OTP",
+           
+                display_name = "Eazeesign Via Eazeesign"
+
+                email_sent = send_email_safe(
+                    request,
+                    subject="Verify your identity to log in to Eazeesign",
                     body=html_content,
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    to=[email]         # recipient email
+                    recipient_list=[email],
+                    from_email=f"{display_name} <{settings.DEFAULT_FROM_EMAIL}>"
                 )
-                email1.content_subtype = "html"
+                if not email_sent:
+                    return redirect(request.path)  
+            
 
-                # Send email
-                email1.send(fail_silently=False)
 
+            
 
                 if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                     return JsonResponse({'success': True, 'message': 'OTP resent successfully!'})
@@ -125,8 +123,14 @@ def forgot_password(request):
         session_email = request.session.get('reset_email')
         session_otp = request.session.get('reset_otp')
         otp_expires = request.session.get('otp_expires')
+        if otp_expires is None:
+            # OTP expiry time set hi nahi hua
+            # handle as expired
+            messages.error(request, "OTP expired. Please request a new one.")
+            return render(request, "esign/forgot_password.html", {"email": email,"masked_email":email})
 
-       
+        # expiry_dt = datetime.fromisoformat(otp_expires)
+        # if timezone.now() > otp_expires:
         if timezone.now() > timezone.datetime.fromisoformat(otp_expires):
             messages.error(request, "OTP expired. Please request a new one.")
         elif str(session_otp) != str(entered_otp):
@@ -167,20 +171,40 @@ def change_password(request):
                 user.save()
 
                 # Clear session
-                request.session.pop('reset_email', None)
-                request.session.pop('reset_otp', None)
-                request.session.pop('otp_expires', None)
-
+              
                 # Automatically log in the user
                 authenticated_user = authenticate(username=user.username, password=new_password)
                 if authenticated_user is not None:
                     login(request, authenticated_user)
+                    display_name = "Eazeesign Via Eazeesign"
+                    html_content = render_to_string('mails/password_changed_successfully.html', {
+                        "recipient_name":user.first_name+" "+user.last_name,
+                        "email":user.email,
+                        'document_link': "https://app.eazeesign.com/",  # if you want to include OTP
+                        })
+                    email_sent = send_email_safe(
+                    request,
+                    subject="Your Eazeesign Password has been changed",
+                    body=html_content,
+                    recipient_list=[user.email],
+                    from_email=f"{display_name} <{settings.DEFAULT_FROM_EMAIL}>"
+                    )
+                    if not email_sent:
+                        return redirect(request.path)  
+                    request.session.pop('reset_email', None)
+                    request.session.pop('reset_otp', None)
+                    request.session.pop('otp_expires', None)
+
+
                     messages.success(request, "Password updated successfully! You are now logged in.")
+
+              
+
                     return redirect('index')  # Redirect to dashboard
 
                 else:
                     messages.success(request, "Password updated! Please log in.")
-                    return redirect('login')
+                    return redirect('user_login')
 
         except User.DoesNotExist:
             messages.error(request, "User not found in database.")
@@ -239,15 +263,54 @@ def resend_otp(request):
             request.session["email_otp"] = otp
 
 
-            send_mail(
-                subject="Your new OTP",
-                message=f"Your OTP is {otp}",
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[email],
-                fail_silently=False,
-            )
+            # send_mail(
+            #     subject="Your new OTP",
+            #     message=f"Your OTP is {otp}",
+            #     from_email=settings.DEFAULT_FROM_EMAIL,
+            #     recipient_list=[email],
+            #     fail_silently=False,
+            # )
+            # name = email.split('@')[0]
 
-            return JsonResponse({"success": True, "message": "OTP resent successfully!","otp":otp})
+            # html_content = render_to_string('mails/resend_otp.html', {
+                
+            #     'EXPIRY_MINUTES': "10",
+            #     "name":name,
+            #     'otp': otp,  # if you want to include OTP
+            # })
+
+            # # Create EmailMessage
+            # email1 = EmailMessage(
+            #     subject="Your Resend OTP Code",
+            #     body=html_content,
+            #     from_email=settings.DEFAULT_FROM_EMAIL,
+            #     to=[email]         # recipient email
+            # )
+            # email1.content_subtype = "html"
+
+            # # Send email
+            # email1.send(fail_silently=False)
+
+            html_content = render_to_string('mails/resend_otp.html', {
+                
+                'EXPIRY_MINUTES': "10",
+                "name":profile.first_name+" "+profile.last_name,
+                'otp': otp,  # if you want to include OTP
+                })
+            display_name = "Eazeesign Via Eazeesign"
+            email_sent = send_email_safe(
+                    request,
+                    subject="Your Resend OTP Code",
+                    body=html_content,
+                    recipient_list=[email],
+                    from_email=f"{display_name} <{settings.DEFAULT_FROM_EMAIL}>"
+
+                )
+            if not email_sent:
+                return redirect(request.path)  # Wapas same page
+            
+
+            return JsonResponse({"success": True, "message": "OTP resent successfully!"})
         except Profile.DoesNotExist:
             return JsonResponse({"success": False, "message": "User not found."})
 
@@ -344,8 +407,42 @@ def user_login(request):
     return render(request, 'esign/login.html')
 
 def contact_us(request):
-    return render(request,'esign/contact_us.html')
+    if request.method == "POST":
+        name = request.POST.get("inputContactName")
+        email = request.POST.get("inputContactEmail")
+        phone = request.POST.get("inputContactPhone")
+        company = request.POST.get("inputContactCompanyName")
 
+        # Email body
+        body = f"""
+        <h3>New Contact Form Submission</h3>
+        <p><strong>Name:</strong> {name}</p>
+        <p><strong>Email:</strong> {email}</p>
+        <p><strong>Phone:</strong> {phone}</p>
+        <p><strong>Company Name:</strong> {company}</p>
+        """
+
+        # Send to your email
+        to_email = ["sauravdaiya870@gmail.com"]
+
+        email_msg = EmailMessage(
+            subject="New Contact Form Submission",
+            body=body,
+            from_email=settings.EMAIL_HOST_USER,     # Sender = your configured email
+            to=to_email
+        )
+        email_msg.content_subtype = "html"
+
+        try:
+            email_msg.send()
+            messages.success(request, "Your message has been sent successfully!")
+        except Exception as e:
+            print("EMAIL ERROR:", e)
+            messages.error(request, "Failed to send message. Try again later.")
+
+        return redirect("contact_us")
+
+    return render(request, "esign/contact_us.html")
 
 def contact_view(request):
     # Clear old messages
@@ -760,7 +857,7 @@ def send_signing_link(request, pk):
     selected_pages = payload.get('allowed_pages', [])
     order_postion_bulk1 = payload.get('order_postion_bulk', [])
 
-
+    print("order_postion_bulk1",order_postion_bulk1)
     
     # selected_pages = json.loads(request.POST.get('selected_pages', '[]'))
     print(f"[INFO] Selected pages received: {selected_pages}")
@@ -801,9 +898,11 @@ def send_signing_link(request, pk):
             # agar valid_until blank ho to default 2 din ka expiry
             expires = timezone.now() + timedelta(days=2)
         SigningToken.objects.create(document=doc, token=token1, expires_at=expires)
+        print("position",position)
         if position == 1:
             recipient_list.append(email)
             token = token1
+            email_first_name = name
         
         
 
@@ -824,7 +923,7 @@ def send_signing_link(request, pk):
     if not recipient_list:
         messages.error(request, "Provide at least one valid recipient email.")
         print("[ERROR] No recipient emails provided.")
-        return redirect('document_list')
+        return redirect(f'/document/{doc.id}/')
 
     # Get boxes data from POST and save to DB
     try:
@@ -916,22 +1015,33 @@ def send_signing_link(request, pk):
     if order_postion_bulk1:
         encoded_email = urlsafe_base64_encode(force_bytes(recipient_list))
         sign_url = request.build_absolute_uri(reverse('sign_document', args=[token,encoded_email]))
-        html_content = render_to_string('esign/email_template_sign_request.html', {
+        name = email_first_name if email_first_name else recipient_list[0].split("@")[0]
+        # name = name_part.replace(".", " ").title()   # Saurav Dahiya
+        print("name",name)
+
+        html_content = render_to_string('mails/email_template_sign_request.html', {
             'doc_title': doc.title,
             'sign_url': sign_url,
-            'user': "Saurav"
+            'name': name
             })
         print(recipient_list,"recipient_list")
-        email = EmailMessage(
-                subject=f"Please sign document: {subjectget}",
-                body=html_content,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=recipient_list,
-                cc=cc_list
-            )
-        email.content_subtype = "html"
-        email.attach(merged_filename, open(merged_path, 'rb').read(), 'application/pdf')
-        email.send(fail_silently=False)
+    
+    
+        auth_user = request.user.get_full_name() or request.user.first_name
+        display_name = f"{auth_user} Via Eazeesign"
+        email_sent = send_email_safe(
+                    request,
+                    subject=f"Complete with Eazeesign: {doc.title}",
+                    body=html_content,
+                    recipient_list=recipient_list,
+                    from_email=f"{display_name} <{settings.DEFAULT_FROM_EMAIL}>"
+                )
+        if not email_sent:
+            return redirect(f'/document/{doc.id}/')
+
+            
+        # name = recipient_list.split("@")[0]              # saurav.dahiya
+
     else:
         for i in recipient_list:
             encoded_email = urlsafe_base64_encode(force_bytes(i))
@@ -955,22 +1065,27 @@ def send_signing_link(request, pk):
             # expires = timezone.now() + timedelta(days=2)
             SigningToken.objects.create(document=doc, token=token, expires_at=expires)
             sign_url = request.build_absolute_uri(reverse('sign_document', args=[token,encoded_email]))
-            html_content = render_to_string('esign/email_template_sign_request.html', {
+            html_content = render_to_string('mails/email_template_sign_request.html', {
             'doc_title': doc.title,
             'sign_url': sign_url,
-            'user': "Saurav"
+            'name': i.split("@")[0]
             })
-            print(recipient_list,"recipient_list")
-            email = EmailMessage(
-                subject=f"Please sign document: {subjectget}",
-                body=html_content,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[i],
-                cc=cc_list
-            )
-            email.content_subtype = "html"
-            email.attach(merged_filename, open(merged_path, 'rb').read(), 'application/pdf')
-            email.send(fail_silently=False)
+            # print(recipient_list,"recipient_list")
+            # display_name = "Eazeesign Via Eazeesign"
+            auth_user = request.user.get_full_name() or request.user.first_name
+            display_name = f"{auth_user} Via Eazeesign"
+
+            email_sent = send_email_safe(
+                    request,
+                    subject=f"Complete with Eazeesign: {subjectget}",
+                    body=html_content,
+                    recipient_list=[i],
+                    from_email=f"{display_name} <{settings.DEFAULT_FROM_EMAIL}>"
+                )
+            if not email_sent:
+                return redirect(f'/document/{doc.id}/')
+
+            
 
 
 
@@ -982,6 +1097,7 @@ def send_signing_link(request, pk):
         print(f"[INFO] Email sent successfully to: {recipient_list}, CC: {cc_list}")
 
         messages.success(request, f"Signing link sent to: {', '.join(recipient_list)}")
+        messages.error(request, f"Signing link sent to: {', '.join(recipient_list)}")
         if cc_list:
             messages.success(request, f"CC: {', '.join(cc_list)}")
     except Exception as e:
@@ -994,19 +1110,27 @@ def send_signing_link(request, pk):
 
 
 
+def accept_terms(request):
+    request.session['accepted_terms'] = True
+    return JsonResponse({'status': 'ok'})
+def check_terms(request):
+    accepted = request.session.get('accepted_terms', False)
+    return JsonResponse({'accepted': accepted})
 
-
-
+def disclosure_view(request):
+    return render(request, "esign/disclosure.html")
 
 def sign_document(request, token, encoded_email=None):
     st = get_object_or_404(DocumentSignFlow, token=token)
     doc = st.document
     try:
         signing_token = SigningToken.objects.get(document=doc, token=token)
-
+        print("signing_token",signing_token)
         # Compare both in UTC (Django handles timezone-aware datetimes internally)
         print('signing_token.expires_at',signing_token.expires_at,timezone.now(),'timezone.now()')
-        if signing_token.expires_at.date() < timezone.now().date():
+        expires_date = signing_token.expires_at.date()  # this is a datetime.date
+        new_date = expires_date + timedelta(days=1)
+        if new_date < timezone.now().date():
             # token expired
             return render(request, 'esign/token_invalid.html', {
                 "message": "This signing link has expired."
@@ -1016,7 +1140,6 @@ def sign_document(request, token, encoded_email=None):
         return render(request, 'esign/token_invalid.html', {
             "message": "Invalid signing token."
         })
-    print("st",st)
     # Current flow
     try:
         flow = DocumentSignFlow.objects.get(document=doc, token=token)
@@ -1025,7 +1148,7 @@ def sign_document(request, token, encoded_email=None):
             "message": "You are not authorized to sign this document."
         })
 
-    # Already signed check
+    # # Already signed check
     invalid_states = {
         flow.is_signed: "You have already signed this document.",
         flow.is_canceled: "You have canceled signing for this document.",
@@ -1088,9 +1211,9 @@ def sign_document(request, token, encoded_email=None):
     # Saved signatures for this user
     email = urlsafe_base64_decode(encoded_email).decode()
     if request.user.is_authenticated:
-        saved_signatures = Signature.objects.filter(email=email)
+        saved_signatures = Signature.objects.filter(email=email).values('id', 'name', 'image','initials_image')
     else:
-        saved_signatures = Signature.objects.filter(email=email)
+        saved_signatures = Signature.objects.filter(email=email).values('id', 'name', 'image','initials_image')
 
     print("saved_signatures",saved_signatures,email)
     # Allowed pages
@@ -1134,7 +1257,7 @@ def sign_document(request, token, encoded_email=None):
     return render(request, 'esign/sign_page.html', {
         'document': doc,
         'token': token,
-        'saved_signatures': saved_signatures,
+        'saved_signatures': list(saved_signatures),
         'allowed_pages_list': allowed_pages_list,
         'signature_boxes': signature_boxes,
         'can_sign': True,
@@ -1168,6 +1291,29 @@ def apply_signatures(request):
         pdf = fitz.open(pdf_path)
 
         # Insert signatures
+        # for p in placements:
+        #     page_num = int(p['page'])
+        #     page = pdf[page_num - 1]
+        #     rect = page.rect
+        #     x_pct = float(p['x_pct'])
+        #     y_pct = float(p['y_pct'])
+        #     w_pct = float(p.get('width_pct', 0.25))
+        #     h_pct = float(p.get('height_pct', 0.1))
+        #     target_w = rect.width * w_pct
+        #     target_h = rect.height * h_pct
+        #     x_pt = rect.x0 + rect.width * x_pct - target_w / 2
+        #     y_pt = rect.y0 + rect.height * y_pct - target_h / 2
+
+        #     if p.get('signature_id'):
+        #         sig = Signature.objects.get(pk=int(p['signature_id']))
+        #         page.insert_image(fitz.Rect(x_pt, y_pt, x_pt + target_w, y_pt + target_h), filename=sig.image.path)
+        #     elif p.get('base64'):
+        #         header, b64 = p['base64'].split(',', 1)
+        #         imgdata = base64.b64decode(b64)
+        #         imgstream = BytesIO(imgdata)
+        #         page.insert_image(fitz.Rect(x_pt, y_pt, x_pt + target_w, y_pt + target_h), stream=imgstream)
+        first_signature = None  # store first signature object
+
         for p in placements:
             page_num = int(p['page'])
             page = pdf[page_num - 1]
@@ -1181,20 +1327,67 @@ def apply_signatures(request):
             x_pt = rect.x0 + rect.width * x_pct - target_w / 2
             y_pt = rect.y0 + rect.height * y_pct - target_h / 2
 
-            if p.get('signature_id'):
-                sig = Signature.objects.get(pk=int(p['signature_id']))
-                page.insert_image(fitz.Rect(x_pt, y_pt, x_pt + target_w, y_pt + target_h), filename=sig.image.path)
-            elif p.get('base64'):
-                header, b64 = p['base64'].split(',', 1)
-                imgdata = base64.b64decode(b64)
-                imgstream = BytesIO(imgdata)
-                page.insert_image(fitz.Rect(x_pt, y_pt, x_pt + target_w, y_pt + target_h), stream=imgstream)
+            box_type = p.get('type')
+            item_id = p.get('id')
+            value = p.get('value')
+
+            print(f"Processing placement: page={page_num}, type={box_type}, id={item_id}, value={value}")
+            print(f"Coords: x={x_pt}, y={y_pt}, w={target_w}, h={target_h}")
+
+            if box_type == "signature":
+                if item_id:  # the first signature added
+                    sig = Signature.objects.get(pk=int(item_id))
+                    first_signature = sig  # store it for other boxes
+                elif first_signature:  # use the first signature for other boxes
+                    sig = first_signature
+                else:
+                    continue  # skip if no signature yet
+
+                print(f"Inserting signature ID {sig.id} at page {page_num}")
+                page.insert_image(
+                    fitz.Rect(x_pt, y_pt, x_pt + target_w, y_pt + target_h),
+                    filename=sig.image.path
+                )
+            elif box_type == "initial":
+                if item_id:  # the first signature added
+                    sig = Signature.objects.get(pk=int(item_id))
+                    first_signature = sig  # store it for other boxes
+                elif first_signature:  # use the first signature for other boxes
+                    initial = first_signature
+                else:
+                    continue  # skip if no signature yet
+            
+                # initial = Signature.objects.get(pk=int(item_id))
+                print(f"Inserting initial ID {item_id} at page {page_num}")
+                page.insert_image(fitz.Rect(x_pt, y_pt, x_pt + target_w, y_pt + target_h), filename=initial.initials_image.path)
+
+            elif box_type == "stamp" and item_id:
+                stamp = Signature.objects.get(pk=int(item_id))
+                print(f"Inserting stamp ID {item_id} at page {page_num}")
+                page.insert_image(fitz.Rect(x_pt, y_pt, x_pt + target_w, y_pt + target_h), filename=stamp.image.path)
+
+            elif box_type == "date" and value:
+                print(f"Inserting date '{value}' at page {page_num}")
+                page.insert_textbox(
+                    fitz.Rect(x_pt, y_pt, x_pt + target_w, y_pt + target_h),
+                    str(value),
+                    fontsize=12,
+                    fontname="helv",
+                    color=(0, 0, 0)
+                )
+
 
         # Save merged PDF to memory
         out = BytesIO()
         pdf.save(out)
         pdf.close()
         out.seek(0)
+
+        # Save merged PDF to memory
+        # out = BytesIO()
+        # pdf.save(out)
+        # pdf.close()
+        # out.seek(0)
 
         # Save merged PDF to current flow
         merged_fname = f'merged-{doc.pk}-{secrets.token_hex(6)}.pdf'
@@ -1218,52 +1411,45 @@ def apply_signatures(request):
             encoded_email = urlsafe_base64_encode(force_bytes(next_flow.recipient_email))
             sign_url = request.build_absolute_uri(reverse('sign_document', args=[next_flow.token, encoded_email]))
             
-            html_content = render_to_string('esign/email_template_sign_request.html', {
+            html_content = render_to_string('mails/email_template_sign_request.html', {
                 'doc_title': doc.title,
                 'sign_url': sign_url,
                 'user': next_flow.recipient_name,
                 'merged_url': request.build_absolute_uri(flow.merged_file.url),
                 'message': 'Your document has been signed and merged PDF is attached.'
             })
-            # from_email = get_from_email(doc=doc)
-            email = EmailMessage(
-                subject=f"Document Signed: {doc.title}",
-                body=html_content,
-                # from_email='sauravdahiya870@gmail.com',
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[next_flow.recipient_email]
-            )
-            email.content_subtype = "html"
 
-            # Attach merged PDF
-            flow.merged_file.open()
-            email.attach(
-                flow.merged_file.name.split('/')[-1],
-                flow.merged_file.read(),
-                'application/pdf'
-            )
+            display_name = "Eazeesign Via Eazeesign"
 
-            email.send(fail_silently=False)
-
-        # Optionally, send email to current signer as confirmation
-        email_body_self = f"""
-        Hello {flow.recipient_name},
-
-        You have successfully signed the document: "{doc.title}".
-
-        The merged PDF is attached for your reference.
-
-        You can also access it here: {request.build_absolute_uri(flow.merged_file.url)}
-
-        Thank you.
-        """
+            email_sent = send_email_safe(
+                    request,
+                    subject=f"Complete with Eazeesign: {doc.title}",
+                    body=html_content,
+                    recipient_list=[next_flow.recipient_email],
+                    from_email=f"{display_name} <{settings.DEFAULT_FROM_EMAIL}>"
+                )
+            if not email_sent:
+                return redirect(request.path)  # Wapas same page
+            
+        recipient_name = flow.recipient_name
+        if not recipient_name:
+            recipient_name = flow.recipient_email.split("@")[0]
+        html_content = render_to_string('mails/document_signed_successfully.html', {
+                'doc_title': doc.title,
+                'sign_url': "",
+                'recipient_name': recipient_name,
+                'user': recipient_name,
+                'document_link':request.build_absolute_uri(flow.merged_file.url)
+            })
+        display_name = "Eazeesign Via Eazeesign"
 
         email_self = EmailMessage(
-            subject=f"Document Signed: {doc.title}",
-            body=email_body_self,
-            from_email= settings.DEFAULT_FROM_EMAIL,
+            subject=f"Completed: Complete with Eazeesign: {doc.title}",
+            body=html_content,
+            from_email=f"{display_name} <{settings.DEFAULT_FROM_EMAIL}>",
             to=[flow.recipient_email]
         )
+        email_self.content_subtype = "html"
 
         # email_self.content_subtype = "html"
 
@@ -1275,6 +1461,10 @@ def apply_signatures(request):
         )
         email_self.send(fail_silently=False)
 
+        if 'accepted_terms' in request.session:
+            del request.session['accepted_terms']
+
+
         return JsonResponse({'ok': True, 'merged_url': flow.merged_file.url})
 
     except Exception as e:
@@ -1283,26 +1473,54 @@ def apply_signatures(request):
 def thankyou(request):
     return render(request,'esign/thank_you.html')
 
+def get_initial_image(request, sig_id):
+    try:
+        # sig = Signature.objects.get(id=sig_id)
+        sig = Signature.objects.get(id=sig_id)
+        print(sig.__dict__)  # prints all fields and values
+        if sig.initials_image:  # make sure you have a field for initial image
+            return JsonResponse({'ok': True, 'initialImageUrl': sig.initials_image.url})
+        else:
+            return JsonResponse({'ok': False, 'error': sig})
+    except Signature.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Signature not found'})
+    
 
-# @login_required
+    
 def upload_signature(request):
     if request.method == 'POST':
         data = json.loads(request.body.decode('utf-8'))
         img = data.get('image')
+        initials_img = data.get('initials_image')  # new initials image
         name = data.get('name','')
-        email = data.get('email')  # email is now required
-        
-        if not img:
-            return JsonResponse({'ok': False, 'error': 'no image'}, status=400)
-        header, b64 = img.split(',',1)
-        imgdata = base64.b64decode(b64)
-        user = request.user
-        sig = Signature(email=email, name=name)
-        sig.image.save(f'sig-{secrets.token_hex(6)}.png', ContentFile(imgdata))
-        sig.save()
-        return JsonResponse({'ok': True, 'id': sig.id, 'url': sig.image.url})
-    return JsonResponse({'ok': False, 'error': 'POST only'}, status=405)
+        email = data.get('email')  # required
 
+        if not img:
+            return JsonResponse({'ok': False, 'error': 'No signature image provided'}, status=400)
+
+        sig = Signature(email=email, name=name)
+
+        # Save signature image
+        header, b64 = img.split(',', 1)
+        imgdata = base64.b64decode(b64)
+        sig.image.save(f'sig-{secrets.token_hex(6)}.png', ContentFile(imgdata))
+
+        # Save initials image if provided
+        if initials_img:
+            header_init, b64_init = initials_img.split(',', 1)
+            init_data = base64.b64decode(b64_init)
+            sig.initials_image.save(f'init-{secrets.token_hex(6)}.png', ContentFile(init_data))
+
+        sig.save()
+
+        return JsonResponse({
+            'ok': True,
+            'id': sig.id,
+            'url': sig.image.url,
+            'initials_url': sig.initials_image.url if sig.initials_image else None
+        })
+
+    return JsonResponse({'ok': False, 'error': 'POST only'}, status=405)
 
 @login_required
 def delete_document(request, pk):
@@ -1532,7 +1750,7 @@ def send_signing_link_bulk(request, pk):
         sign_url = request.build_absolute_uri(reverse('sign_document', args=[token, encoded_email]))
         print(f"[INFO] Sending email to {email} with link {sign_url}")
         
-        html_content = render_to_string('esign/email_template_sign_request.html', {
+        html_content = render_to_string('mails/email_template_sign_request.html', {
             'doc_title': doc.title,
             'sign_url': sign_url,
             'user': "Saurav"
@@ -1604,20 +1822,41 @@ def cancel_signing(request, token):
             try:
                 document = flow.document  # Assuming DocumentSignFlow has FK to Document as 'document'
                 owner = document.owner
-                subject = f"Document Cancelled: {document.title}"
-                message = f"Hello {owner.get_full_name() or owner.username},\n\n" \
-                          f"The document titled '{document.title}' has been cancelled by the signer.\n"
-                if reason:
-                    message += f"Reason provided: {reason}\n"
-                message += "\nPlease check the platform for more details.\n\nThanks,\nYour Company"
-                
-                send_mail(
-                    subject,
-                    message,
-                    flow.recipient_email,  # from email
-                    [owner.email],
-                    fail_silently=False,
-                )
+
+                subject = f"Document Cancelled:: {document.title}"
+
+                # if you have a custom HTML email template, use it
+                html_content = render_to_string('mails/document_cancelled_to_sign_email.html', {
+                    'recipient_name': owner.get_full_name() or owner.username,
+                    'assigner_name': "",
+                    'document_title': document.title,
+                    'site_url': settings.SITE_URL
+                })
+
+                # send email using EmailMessage
+                # email_msg = EmailMessage(
+                #     subject=subject,
+                #     body=html_content,
+                #     from_email=settings.DEFAULT_FROM_EMAIL,  # sender is the one assigning
+                #     to=[owner.email],
+                # )
+
+                display_name = "Eazeesign Via Eazeesign"
+
+                email_sent = send_email_safe(
+                        request,
+                        subject=subject,
+                        body=html_content,
+                        recipient_list=[owner.email],
+                        from_email=f"{display_name} <{settings.DEFAULT_FROM_EMAIL}>"
+                    )
+                if not email_sent:
+                    return redirect(request.path)  # Wapas same page
+
+
+                # email_msg.content_subtype = "html"
+                # email_msg.send(fail_silently=False)
+
             except Exception as e:
                 # Log error but continue
                 print(f"Email sending failed: {e}")
@@ -1627,106 +1866,90 @@ def cancel_signing(request, token):
             return JsonResponse({"success": False, "message": "You must sign in order. Cannot cancel yet."})
     return JsonResponse({"success": False, "message": "Invalid request."})
 
-
 def assign_document(request, token):
-    if request.method == "POST":
-        # Get current flow
-        st = get_object_or_404(DocumentSignFlow, token=token)
-        if request.content_type == "application/json":
-            try:
-                data = json.loads(request.body)
-                name = data.get('name')
-                encoded_email = data.get('email')
-                role=  ''
-            except Exception:
-                return JsonResponse({'success': False, 'message': 'Invalid JSON data.'})
-        else:
-            # Handle standard form POST
-            name = request.POST.get('assigned_name')
-            email_raw = request.POST.get('assigned_email')
-            role = "viewer"
-            if email_raw:
-                encoded_email = urlsafe_base64_encode(force_bytes(email_raw))
-            else:
-                encoded_email = None
-
-                
+    if request.method == 'POST':
         try:
-            email = urlsafe_base64_decode(encoded_email).decode()  # ✅ now plain email
-        except Exception:
-            return JsonResponse({'success': False, 'message': 'Invalid email encoding.'})
+            data = json.loads(request.body)  # parse JSON
+            email = data.get("assign_email")
+            name = data.get("assign_name")
+        except json.JSONDecodeError:
+            return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
 
-        print('encoded_email',encoded_email)
-        if not name or not email:
-            return JsonResponse({'success': False, 'message': 'Name and email are required.'})
+        if not email or not name:
+            return JsonResponse({'status': 'error', 'message': 'Name and Email are required'}, status=400)
 
-        # Check signing order
-        if st.order not in [0, 1]:
-            return JsonResponse({
-                'success': False,
-                'message': 'You cannot assign this document. Signing order must be 0 or 1.'
-            })
+        # get original document flow by token
+        st = get_object_or_404(DocumentSignFlow, token=token)
 
-        # Prepare new token
+        # generate new token for assigned signer
+        # new_token = secrets.token_urlsafe(16)
         new_token = get_random_string(32)
-
-        # Get last merged file from previous signed flow
-        last_signed_flow = DocumentSignFlow.objects.filter(
-            token=token
-        ).first()
-
-        print(last_signed_flow.recipient_email,"get email")
-        print("last_signed_flow",last_signed_flow,email,token)
-        merged_path = None
-        merged_filename = None
-        if last_signed_flow and last_signed_flow.merged_file:
-            merged_path = last_signed_flow.merged_file.path
-            merged_filename = last_signed_flow.merged_file.name.split('/')[-1]
-
-        # Create new flow
+        # create a new flow record
         new_flow = DocumentSignFlow.objects.create(
             document=st.document,
             token=new_token,
             recipient_name=name,
             recipient_email=email,
             order=0,
-            role=role
+            role='Signer'
         )
         st.assigned_by = new_flow.id
         st.save()
 
-        # Encode email for URL only
+        signing_token = SigningToken.objects.get(document=st.document, token=token)
+        SigningToken.objects.create(document=st.document, token=new_token, expires_at=signing_token.expires_at)
+        # build document link
+        # encoded_email = urlsafe_base64_encode(force_bytes(email))
+        # document_link = f"{settings.SITE_URL}/document/sign/{new_token}/{encoded_email}"
+
         encoded_email = urlsafe_base64_encode(force_bytes(email))
-        sign_url = request.build_absolute_uri(
-            reverse('sign_document', args=[new_token, encoded_email])
-        )
+        document_link = request.build_absolute_uri(reverse('sign_document', args=[new_token,encoded_email]))
+        # prepare email content
+        subject = f"You've been assigned a document to sign: {st.document.title if hasattr(st.document, 'title') else 'Document'}"
 
-        # Render email template
-        html_content = render_to_string('esign/email_template_sign_request.html', {
-            'doc_title': st.document.title if hasattr(st.document, 'title') else "Document",
-            'sign_url': sign_url,
-            'user': name
-        })
+        # if you have a custom HTML email template, use it
+        # html_content = render_to_string('mails/email_template_sign_request.html', {
+        #     'recipient_name': name,
+        #     'assigner_name': st.recipient_name,
+        #     'document_title': getattr(st.document, 'title', 'Document'),
+        #     'document_link': document_link,
+        #     'site_url': settings.SITE_URL
+        # })
+        recipient_email = st.recipient_email  # e.g. "saurav.dahiya@gmail.com"
+        user_name = recipient_email.split("@")[0]
 
-        # Send email
-        email_msg = EmailMessage(
-            subject=f"Please sign document: {st.document.title if hasattr(st.document, 'title') else 'Document'}",
-            body=html_content,
-            from_email=last_signed_flow.recipient_email,
-            to=[email],  # plain email, NOT encoded
-        )
-        email_msg.content_subtype = "html"
+        html_content = render_to_string('mails/email_template_sign_request.html', {
+                    'doc_title': getattr(st.document, 'title', 'Document'),
+                    'sign_url': document_link,
+                    'name':  user_name
+                    })
+        # send email using EmailMessage
+        # email_msg = EmailMessage(
+        #     subject=subject,
+        #     body=html_content,
+        #     from_email=st.recipient_email,  # sender is the one assigning
+        #     to=[email],
+        # )
+        # email_msg.content_subtype = "html"
+        # email_msg.send(fail_silently=False)
 
-        # Attach merged file if exists
-        if merged_path:
-            with open(merged_path, 'rb') as f:
-                email_msg.attach(merged_filename, f.read(), 'application/pdf')
+        display_name = "Eazeesign Via Eazeesign"
 
-        email_msg.send(fail_silently=False)
+        email_sent = send_email_safe(
+                        request,
+                        subject=subject,
+                        body=html_content,
+                        recipient_list=[st.recipient_email],
+                        from_email=f"{display_name} <{settings.DEFAULT_FROM_EMAIL}>"
+                    )
+        if not email_sent:
+            return redirect(request.path)  # Wapas same page
 
-        return JsonResponse({'success': True})
 
-    return JsonResponse({'success': False, 'message': 'Invalid request.'})
+        return JsonResponse({'status': 'success', 'message': 'Document assigned and email sent successfully!'})
+
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+
 
 
 from django.http import HttpResponse, FileResponse
@@ -1874,95 +2097,263 @@ def checkout_view(request):
     })
 
 
-# @csrf_exempt
-# def create_checkout_session(request):
-#     try:
-#         # Create Stripe checkout session
-#         checkout_session = stripe.checkout.Session.create(
-#             payment_method_types=['card'],
-#             line_items=[{
-#                 'price_data': {
-#                     'currency': 'usd',
-#                     'unit_amount': 2000,  # $20.00
-#                     'product_data': {
-#                         'name': 'Premium Plan',
-#                     },
-#                 },
-#                 'quantity': 1,
-#             }],
-#             mode='payment',
-#             success_url=request.build_absolute_uri(reverse('stripe_success')) + '?session_id={CHECKOUT_SESSION_ID}',
-#             cancel_url=request.build_absolute_uri(reverse('stripe_cancel')),
-#             metadata={
-#                 'plan': 'premium',  # Optional: add any metadata you need
-#                 'user_email': request.user.email if request.user.is_authenticated else 'guest@example.com',
-#             },
-#         )
-
-#         # Return the session id in response
-#         return JsonResponse({'id': checkout_session.id})
-
-#     except Exception as e:
-#         return JsonResponse({'error': str(e)})
 
 
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.urls import reverse
 import stripe, json
+import razorpay
+
+# @csrf_exempt
+# def create_checkout_session(request):
+#     try:
+#         data = json.loads(request.body.decode('utf-8'))
+#         name = data.get('name', 'Premium Plan')
+#         currency = data.get('currency', 'usd')
+#         plan = data.get('plan', 'premium')
+#         amount = int(data.get('amount', 2000))  # in cents
+#         interval = data.get('interval', 'month')  # "month" or "year"
+#         mode = data.get('mode', 'subscription')  # can be "payment" or "subscription"
+
+#         # ✅ Create price with recurring interval if subscription
+#         if mode == 'subscription':
+#             price = stripe.Price.create(
+#                 unit_amount=amount,
+#                 currency=currency,
+#                 recurring={'interval': interval},
+#                 product_data={'name': name},
+#             )
+#         else:
+#             price = stripe.Price.create(
+#                 unit_amount=amount,
+#                 currency=currency,
+#                 product_data={'name': name},
+#             )
+
+#         # ✅ Create checkout session
+#         checkout_session = stripe.checkout.Session.create(
+#             payment_method_types=['card'],
+#             line_items=[{
+#                 'price': price.id,
+#                 'quantity': 1,
+#             }],
+#             mode=mode,
+#             success_url=request.build_absolute_uri(reverse('stripe_success')) + '?session_id={CHECKOUT_SESSION_ID}',
+#             cancel_url=request.build_absolute_uri(reverse('stripe_cancel')),
+#             metadata={
+#                 'plan': plan,
+#                 'interval': interval,
+#                 'user_email': request.user.email if request.user.is_authenticated else 'guest@example.com',
+#             },
+#         )
+
+#         # Return direct checkout URL
+#         return JsonResponse({'checkout_url': checkout_session.url})
+
+#     except Exception as e:
+#         return JsonResponse({'error': str(e)}, status=400)
+
 
 @csrf_exempt
 def create_checkout_session(request):
     try:
         data = json.loads(request.body.decode('utf-8'))
-        name = data.get('name', 'Premium Plan')
-        currency = data.get('currency', 'usd')
+
+        # Plan / Payment Info
+        plan_name = data.get('plan_name', 'Premium')
         plan = data.get('plan', 'premium')
-        amount = int(data.get('amount', 2000))  # in cents
-        interval = data.get('interval', 'month')  # "month" or "year"
-        mode = data.get('mode', 'subscription')  # can be "payment" or "subscription"
+        amount = int(float(data.get('amount', 2000))) * 100  # paise
+        currency = data.get('currency', 'INR').upper()
+        interval = data.get('interval', 'month')
 
-        # ✅ Create price with recurring interval if subscription
-        if mode == 'subscription':
-            price = stripe.Price.create(
-                unit_amount=amount,
-                currency=currency,
-                recurring={'interval': interval},
-                product_data={'name': name},
-            )
-        else:
-            price = stripe.Price.create(
-                unit_amount=amount,
-                currency=currency,
-                product_data={'name': name},
-            )
+        # Customer details
+        first_name = data.get('f_name', '')
+        last_name = data.get('l_name', '')
+        email = data.get('email', '')
 
-        # ✅ Create checkout session
-        checkout_session = stripe.checkout.Session.create(
-            payment_method_types=['card'],
-            line_items=[{
-                'price': price.id,
-                'quantity': 1,
-            }],
-            mode=mode,
-            success_url=request.build_absolute_uri(reverse('stripe_success')) + '?session_id={CHECKOUT_SESSION_ID}',
-            cancel_url=request.build_absolute_uri(reverse('stripe_cancel')),
-            metadata={
-                'plan': plan,
-                'interval': interval,
-                'user_email': request.user.email if request.user.is_authenticated else 'guest@example.com',
+        phone = data.get('phone_number', '')
+        if phone.startswith("0"):
+            phone = phone[1:]    # remove leading zero
+
+
+
+        # Razorpay client
+        client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+
+        # Build only non-empty notes
+        notes_data = {
+            "plan_name": plan_name,
+            "plan": plan,
+            "interval": interval,
+        }
+        if first_name: notes_data["first_name"] = first_name
+        if last_name: notes_data["last_name"] = last_name
+        if email: notes_data["email"] = email
+        if phone: notes_data["phone"] = phone
+
+        # Create Razorpay Order
+        order = client.order.create({
+            "amount": amount,
+            "currency": currency,
+            "payment_capture": 1,
+            "notes": notes_data
+        })
+
+        # Response to frontend
+        return JsonResponse({
+            "order_id": order["id"],
+            "amount": amount,
+            "currency": currency,
+            "key_id": settings.RAZORPAY_KEY_ID,
+            "customer": {
+                "first_name": first_name,
+                "last_name": last_name,
+                "email": email,
+                "phone": phone
             },
-        )
-
-        # Return direct checkout URL
-        return JsonResponse({'checkout_url': checkout_session.url})
+            "metadata": {
+                "plan": plan,
+                "interval": interval
+            },
+            "success_url": request.build_absolute_uri(reverse("razorpay_success")),
+            "cancel_url": request.build_absolute_uri(reverse("razorpay_cancel")),
+        })
 
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
+        print("RAZORPAY ERROR:", e)
+        return JsonResponse({"error": str(e)}, status=400)
+
+@csrf_exempt
+def razorpay_success(request):
+    try:
+        # Razorpay returns POST values
+        payment_id = request.POST.get("razorpay_payment_id")
+        order_id = request.POST.get("razorpay_order_id")
+        signature = request.POST.get("razorpay_signature")
+
+        if not payment_id or not order_id or not signature:
+            messages.error(request, "Invalid Razorpay response.")
+            return redirect("register")
+
+        # Razorpay verify signature
+        client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+        params = {
+            "razorpay_order_id": order_id,
+            "razorpay_payment_id": payment_id,
+            "razorpay_signature": signature
+        }
+        client.utility.verify_payment_signature(params)
+
+        # -----------------------------------------------
+        # 1️⃣ Fetch Order Notes (Customer + Plan info)
+        # -----------------------------------------------
+        order_data = client.order.fetch(order_id)
+        notes = order_data.get("notes", {})
+
+        # Fallback from POST (if needed)
+        plan = notes.get("plan") or request.POST.get("plan", "premium")
+        interval = notes.get("interval") or request.POST.get("interval", "month")
+
+        # Customer details
+        first_name = notes.get("first_name") or request.POST.get("first_name", "")
+        last_name = notes.get("last_name") or request.POST.get("last_name", "")
+        user_email = notes.get("email") or request.POST.get("email")
+        phone = notes.get("phone") or request.POST.get("phone", "")
+
+        if not user_email:
+            user_email = "guest@example.com"
+
+        # -----------------------------------------------
+        # 2️⃣ Create User (Auto Password)
+        # -----------------------------------------------
+        import string
+        email_prefix = user_email.split("@")[0]
+
+        uppercase_letter = random.choice(string.ascii_uppercase)
+        digit = random.choice(string.digits)
+        special_char = "@"
+        random_part = ''.join(random.choices(string.ascii_lowercase + string.digits, k=4))
+        password = f"{email_prefix[:3]}{uppercase_letter}{digit}{special_char}{random_part}"
+
+        user, created = User.objects.get_or_create(
+            email=user_email,
+            defaults={
+                "username": user_email,
+                "first_name": first_name if first_name else email_prefix,
+                "last_name": last_name,
+                "is_active": True
+            }
+        )
+
+        if created:
+            user.set_password(password)
+            user.save()
+
+        # -----------------------------------------------
+        # 3️⃣ Create Subscription Entry
+        # -----------------------------------------------
+        subscription, created_sub = Subscription.objects.get_or_create(
+            razorpay_payment_id=payment_id,
+            defaults={
+                "user": user,
+                "plan": plan,
+                "stripe_payment_status": "succeeded",
+                "amount_cents": order_data.get("amount_paid", 0),
+                "currency": order_data.get("currency", "INR"),
+                "status": Subscription.STATUS_ACTIVE
+            }
+        )
+
+        subscription.set_active_dates()
+        subscription.save()
+
+        # -----------------------------------------------
+        # 4️⃣ Send Email (Login Details)
+        # -----------------------------------------------
+        login_url = request.build_absolute_uri(f"/login/?email={user_email}")
+
+        subject = "Your Subscription is Active!"
+        html_content = render_to_string("mails/subscription_active_email.html", {
+            "customer_email": user_email,
+            "customer_first_name": first_name,
+            "customer_last_name": last_name,
+            "customer_phone": phone,
+            "password": password,
+            "plan": plan,
+            "interval": interval,
+            "login_url": login_url,
+        })
+
+        email = EmailMessage(
+            subject=subject,
+            body=html_content,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[user_email],
+        )
+        email.content_subtype = "html"
+        email.send()
+
+        # -----------------------------------------------
+        # 5️⃣ Auto Login User
+        # -----------------------------------------------
+        login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+
+        return render(request, "payments/success.html")
+
+    except razorpay.errors.SignatureVerificationError:
+        messages.error(request, "Payment signature invalid.")
+        return redirect("register")
+
+    except Exception as e:
+        messages.error(request, str(e))
+        return redirect("register")
+
+def razorpay_cancel(request):
+    return render(request, "payments/cancel.html")
 
 
-
-
+# @csrf_exempt
 # def success_view(request):
 #     """
 #     Called after Stripe redirects to success_url.
@@ -1972,10 +2363,6 @@ def create_checkout_session(request):
 #     session_id = request.GET.get('session_id')
 #     if not session_id:
 #         messages.error(request, "Missing session id.")
-#         return redirect('register')  # adjust to your registration page
-
-#     if not stripe.api_key:
-#         messages.error(request, "Stripe not configured on server.")
 #         return redirect('register')
 
 #     try:
@@ -1984,53 +2371,49 @@ def create_checkout_session(request):
 #         messages.error(request, f"Stripe error: {str(e)}")
 #         return redirect('register')
 
-#     # Get important values
-#     payment_intent = session.get('payment_intent') or (session.get('payment_intent') if isinstance(session, dict) else None)
-#     payment_intent_id = payment_intent.id if hasattr(payment_intent, 'id') else (payment_intent if isinstance(payment_intent, str) else None)
-#     payment_status = session.get('payment_status') or (payment_intent.status if hasattr(payment_intent, 'status') else None)
-#     customer_email = None
-#     try:
-#         customer_email = session.get('customer_details', {}).get('email') or session.get('customer_email')
-#     except Exception:
-#         customer_email = None
-
-#     # metadata (we should have set these when creating session)
-#     metadata = session.get('metadata') or {}
-#     plan = metadata.get('plan') or 'monthly'
-#     amount = None
-#     try:
-#         # get amount from line_items or amount_total if present
-#         amount = session.get('amount_total') or (session['display_items'][0]['amount'] if 'display_items' in session and session['display_items'] else None)
-#     except Exception:
-#         amount = None
-
-#     # If no email from Stripe, try metadata
-#     if not customer_email:
-#         customer_email = metadata.get('user_email')
-
+#     # Get customer email
+#     customer_email = (session.customer_details.email 
+#                       if hasattr(session, 'customer_details') and session.customer_details 
+#                       else session.customer_email or session.metadata.get('user_email'))
 #     if not customer_email:
 #         messages.error(request, "Could not determine customer email from Stripe session.")
 #         return redirect('register')
+
+#     # Get plan & amount from metadata
+#     plan = session.metadata.get('plan', 'monthly')
+#     interval = session.metadata.get('interval', 'month')
+#     amount_cents = getattr(session, 'amount_total', None)
+#     currency = getattr(session, 'currency', 'usd')
+#     import string
 
 #     # Create or get user
 #     user, created = User.objects.get_or_create(
 #         email=customer_email,
 #         defaults={
-#             'username': customer_email,  # adjust if your User model uses different field
-#             'first_name': metadata.get('user_name', customer_email.split('@')[0]),
+#             'username': customer_email,
+#             'first_name': session.metadata.get('user_name', customer_email.split('@')[0]),
+#              'is_active': True,   # <- yahan set karo instead
 #         }
 #     )
-#     # If user was just created, set password to default
+#     email_prefix = customer_email.split('@')[0]
+    
+#     # Generate random components
+#     uppercase_letter = random.choice(string.ascii_uppercase)
+#     digit = random.choice(string.digits)
+#     special_char = "@"
+#     random_part = ''.join(random.choices(string.ascii_lowercase + string.digits, k=4))
+    
+#     # Combine parts to form password
+#     password = f"{email_prefix[:3]}{uppercase_letter}{digit}{special_char}{random_part}"
+
 #     if created:
-#         user.set_password("12345")
+#         user.set_password(password)
 #         user.save()
- 
-#     session = stripe.checkout.Session.retrieve(session_id)
 
 #     # Get PaymentIntent to check payment status
-#     payment_intent_id = session.payment_intent
-#     payment_intent = stripe.PaymentIntent.retrieve(payment_intent_id)
-#     payment_status = payment_intent.status  # 'succeeded', 'requires_payment_method', etc.
+#     payment_intent_id = getattr(session, 'payment_intent', None)
+#     payment_intent = stripe.PaymentIntent.retrieve(payment_intent_id) if payment_intent_id else None
+#     payment_status = getattr(payment_intent, 'status', 'pending')
 
 #     # Create or update subscription record
 #     subscription, sub_created = Subscription.objects.get_or_create(
@@ -2038,201 +2421,84 @@ def create_checkout_session(request):
 #         defaults={
 #             'user': user,
 #             'plan': plan,
-#             'status': Subscription.STATUS_ACTIVE if payment_status in ('paid', 'succeeded', 'complete') else Subscription.STATUS_PENDING,
+#             'status': Subscription.STATUS_ACTIVE if payment_status in ('succeeded', 'paid', 'complete') else Subscription.STATUS_PENDING,
 #             'stripe_payment_intent_id': payment_intent_id,
 #             'stripe_payment_status': payment_status,
-#             'amount_cents': session.amount_total if hasattr(session, 'amount_total') else None,
-#             'currency': session.currency if hasattr(session, 'currency') else 'usd',
+#             'amount_cents': amount_cents,
+#             'currency': currency,
 #         }
 #     )
 
-#     # If it already existed, update fields
 #     if not sub_created:
 #         subscription.user = user
+#         subscription.plan = plan
 #         subscription.stripe_payment_intent_id = payment_intent_id
 #         subscription.stripe_payment_status = payment_status
-#         subscription.amount_cents = session.get('amount_total') or subscription.amount_cents
-#         subscription.currency = session.get('currency') or subscription.currency
-#         subscription.plan = plan or subscription.plan
-#         # set active dates if payment succeeded
-#         if payment_status in ('paid', 'succeeded', 'complete'):
+#         subscription.amount_cents = amount_cents or subscription.amount_cents
+#         subscription.currency = currency or subscription.currency
+#         if payment_status in ('succeeded', 'paid', 'complete'):
+#             subscription.status = Subscription.STATUS_ACTIVE
 #             subscription.set_active_dates()
 #         else:
 #             subscription.status = Subscription.STATUS_PENDING
-#             subscription.save()
+#         subscription.save()
 #     else:
-#         # For new subscription created above, set active dates if paid
 #         if subscription.status == Subscription.STATUS_ACTIVE:
 #             subscription.set_active_dates()
 
+#     # Send login email
+#     # login_url = request.build_absolute_uri(f"/login/?email={customer_email}")
+#     # subject = "Your Subscription is Active!"
+#     # message = f"""
+#     # Hi {customer_email},
+
+#     # Your subscription ({plan}) is now active.
+
+#     # Login Details:
+#     # Email: {customer_email}
+#     # Password: 12345
+
+#     # Click the link below to login:
+#     # {login_url}
+
+#     # Thank you!
+#     # """
+#     # send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [customer_email], fail_silently=False)
 #     login_url = request.build_absolute_uri(f"/login/?email={customer_email}")
+
+#     # Send HTML email using EmailMessage
 #     subject = "Your Subscription is Active!"
-#     message = f"""
-#     Hi {customer_email},
+#     html_content = render_to_string("mails/subscription_active_email.html", {
+#         "customer_email": customer_email,
+#         "password":password,
+#         "plan": plan,
+#         "login_url": login_url,
+#     })
 
-#     Your subscription ({plan}) is now active.
-
-#     Login Details:
-#     Email: {customer_email}
-#     Password: 12345
-
-#     Click the link below to login:
-#     {login_url}
-
-#     Thank you!
-#     """
-#     send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [customer_email], fail_silently=False)
-
-#     # OPTIONAL: if you want to send the login email here, do it (not included).
-#     # Now attempt to login the user immediately
+#     email = EmailMessage(
+#         subject=subject,
+#         body=html_content,  # HTML content
+#         from_email=settings.DEFAULT_FROM_EMAIL,
+#         to=[customer_email],
+#     )
+#     email.content_subtype = "html"  # Important!
+#     email.send(fail_silently=False)
+    
+#     # Log user in automatically
 #     try:
-#         # authenticate by checking password - using default password
-#         # If your AUTHENTICATION_BACKENDS require username, ensure username==email or adapt.
 #         login(request, user, backend='django.contrib.auth.backends.ModelBackend')
 #     except Exception:
-#         # fallback: if login fails, just redirect to login page
 #         pass
 
 #     messages.success(request, "Payment successful. Your account was created.")
 #     return render(request, "payments/success.html")
 
-#     # return redirect(reverse('dashboard'))  # change to your dashboard route
-
-
-
-
-
-@csrf_exempt
-def success_view(request):
-    """
-    Called after Stripe redirects to success_url.
-    Expects ?session_id=... in URL.
-    Retrieves Stripe session, then creates user & subscription record.
-    """
-    session_id = request.GET.get('session_id')
-    if not session_id:
-        messages.error(request, "Missing session id.")
-        return redirect('register')
-
-    try:
-        session = stripe.checkout.Session.retrieve(session_id, expand=['payment_intent', 'customer_details'])
-    except stripe.error.StripeError as e:
-        messages.error(request, f"Stripe error: {str(e)}")
-        return redirect('register')
-
-    # Get customer email
-    customer_email = (session.customer_details.email 
-                      if hasattr(session, 'customer_details') and session.customer_details 
-                      else session.customer_email or session.metadata.get('user_email'))
-    if not customer_email:
-        messages.error(request, "Could not determine customer email from Stripe session.")
-        return redirect('register')
-
-    # Get plan & amount from metadata
-    plan = session.metadata.get('plan', 'monthly')
-    interval = session.metadata.get('interval', 'month')
-    amount_cents = getattr(session, 'amount_total', None)
-    currency = getattr(session, 'currency', 'usd')
-
-    # Create or get user
-    user, created = User.objects.get_or_create(
-        email=customer_email,
-        defaults={
-            'username': customer_email,
-            'first_name': session.metadata.get('user_name', customer_email.split('@')[0]),
-        }
-    )
-    if created:
-        user.set_password("12345")
-        user.save()
-
-    # Get PaymentIntent to check payment status
-    payment_intent_id = getattr(session, 'payment_intent', None)
-    payment_intent = stripe.PaymentIntent.retrieve(payment_intent_id) if payment_intent_id else None
-    payment_status = getattr(payment_intent, 'status', 'pending')
-
-    # Create or update subscription record
-    subscription, sub_created = Subscription.objects.get_or_create(
-        stripe_checkout_session_id=session_id,
-        defaults={
-            'user': user,
-            'plan': plan,
-            'status': Subscription.STATUS_ACTIVE if payment_status in ('succeeded', 'paid', 'complete') else Subscription.STATUS_PENDING,
-            'stripe_payment_intent_id': payment_intent_id,
-            'stripe_payment_status': payment_status,
-            'amount_cents': amount_cents,
-            'currency': currency,
-        }
-    )
-
-    if not sub_created:
-        subscription.user = user
-        subscription.plan = plan
-        subscription.stripe_payment_intent_id = payment_intent_id
-        subscription.stripe_payment_status = payment_status
-        subscription.amount_cents = amount_cents or subscription.amount_cents
-        subscription.currency = currency or subscription.currency
-        if payment_status in ('succeeded', 'paid', 'complete'):
-            subscription.status = Subscription.STATUS_ACTIVE
-            subscription.set_active_dates()
-        else:
-            subscription.status = Subscription.STATUS_PENDING
-        subscription.save()
-    else:
-        if subscription.status == Subscription.STATUS_ACTIVE:
-            subscription.set_active_dates()
-
-    # Send login email
-    # login_url = request.build_absolute_uri(f"/login/?email={customer_email}")
-    # subject = "Your Subscription is Active!"
-    # message = f"""
-    # Hi {customer_email},
-
-    # Your subscription ({plan}) is now active.
-
-    # Login Details:
-    # Email: {customer_email}
-    # Password: 12345
-
-    # Click the link below to login:
-    # {login_url}
-
-    # Thank you!
-    # """
-    # send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [customer_email], fail_silently=False)
-    login_url = request.build_absolute_uri(f"/login/?email={customer_email}")
-
-    # Send HTML email using EmailMessage
-    subject = "Your Subscription is Active!"
-    html_content = render_to_string("payments/subscription_success_email.html", {
-        "customer_email": customer_email,
-        "plan": plan,
-        "login_url": login_url,
-    })
-
-    email = EmailMessage(
-        subject=subject,
-        body=html_content,  # HTML content
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        to=[customer_email],
-    )
-    email.content_subtype = "html"  # Important!
-    email.send(fail_silently=False)
-    
-    # Log user in automatically
-    try:
-        login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-    except Exception:
-        pass
-
-    messages.success(request, "Payment successful. Your account was created.")
-    return render(request, "payments/success.html")
-
 
 def cancel_view(request):
     return render(request, "payments/cancel.html")
 
-
+def testing(request):
+    return render(request,'')
 @csrf_exempt
 def stripe_webhook(request):
     payload = request.body
@@ -2294,38 +2560,38 @@ def signup_basic(request):
             request.session["email_otp"] = otp
             request.session["signup_user_id"] = user.id
           
-            # Send OTP mail
-            # send_mail(
-            #     "Your OTP Code",
-            #     f"Your OTP code is {otp}",
-            #     "no-reply@yourdomain.com",
-            #     [email],
-            #     fail_silently=False,
-            # )
             name = email.split('@')[0]
 
-            html_content = render_to_string('esign/otp_email.html', {
+            # html_content = render_to_string('mails/signup_otp_email.html', {
                 
-                'EXPIRY_MINUTES': "10",
-                "name":name,
-                'otp': otp,  # if you want to include OTP
-            })
+            #     'EXPIRY_MINUTES': "10",
+            #     "name":name,
+            #     'otp': otp,  # if you want to include OTP
+            # })
 
             # Create EmailMessage
-            email1 = EmailMessage(
-                subject="Your OTP Code",
-                body=html_content,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[email]         # recipient email
-            )
-            email1.content_subtype = "html"
+            # email1 = EmailMessage(
+            #     subject="Your OTP Code",
+            #     body=html_content,
+            #     from_email=settings.DEFAULT_FROM_EMAIL,
+            #     to=[email]         # recipient email
+            # )
+            # email1.content_subtype = "html"
 
-            # Send email
-            email1.send(fail_silently=False)
+            # # Send email
+            # email1.send(fail_silently=False)
+            # email_sent = send_email_safe(
+            #         request,
+            #         subject="Your OTP Code",
+            #         body=html_content,
+            #         recipient_list=[email],
+            #         from_email=settings.DEFAULT_FROM_EMAIL
+            #     )
+            # if not email_sent:
+            #     return redirect(request.path)  # Wapas same page
+            
 
 
-
-            messages.success(request, f"An OTP has been sent to {email}. Please check your email.")
             return redirect(f"{reverse('signup_multi_step')}?email={email}")
 
 
@@ -2334,23 +2600,7 @@ def signup_basic(request):
 
     return render(request, "esign/signup.html")
 
-def send_email_otp(email, otp):
-    subject = "Your OTP for EazeeSign"
-    message = f"Hello,\n\nYour one-time password (OTP) is: {otp}\n\nPlease do not share it with anyone."
-    from_email = settings.DEFAULT_FROM_EMAIL  # Make sure this is set in settings.py
-    recipient_list = [email]
 
-    try:
-        send_mail(
-            subject,
-            message,
-            from_email,
-            recipient_list,
-            fail_silently=False,  # Set to True if you don't want errors to raise
-        )
-        print(f"OTP sent to {email}")
-    except Exception as e:
-        print(f"Error sending OTP: {e}")
 
 def send_sms_otp(phone, otp):
     # Replace with real SMS sending logic
@@ -2366,24 +2616,53 @@ def signup_multi_step(request):
             print("Proper working")
             # Step 0: Collect basic info
             # email = request.POST.get('userEmail')
-            phone = request.POST.get('userPhone')
+            phone_list = request.POST.getlist('userPhone')
+            phone = phone_list[0] if phone_list else None
+            print("phone",request.POST)
             context['mobile'] = phone
             request.session["signup_phone"] = phone
+            # phone = request.POST.get('userPhone')
+
             first_name = request.POST.get('username')
             last_name = request.POST.get('userLastName')
-            print("email",email)
+            print("email",first_name,last_name,phone)
             try:
                 user = User.objects.get(email=email)  # email ke base pe user fetch karna
                 print("user",user)
                 user.first_name = first_name
                 user.last_name = last_name
-
-                # agar phone field User model me nahi hai to ye optional hai:
-                if hasattr(user, 'phone'):
-                    user.phone = phone
+               
 
                 user.save()
-                messages.success(request, "User details updated successfully!")
+                profile, created = Profile.objects.get_or_create(user=user)
+                # agar phone field User model me nahi hai to ye optional hai:
+                # if hasattr(user, 'phone'):
+                profile.phone = phone
+                profile.save()
+                otp = get_random_string(6, allowed_chars="0123456789")
+                html_content = render_to_string('mails/signup_otp_email.html', {
+                
+                'EXPIRY_MINUTES': "10",
+                "name":first_name+" "+last_name,
+                'otp': otp,  # if you want to include OTP
+                })
+                display_name = "Eazeesign Via Eazeesign"
+
+                email_sent = send_email_safe(
+                    request,
+                    subject="Your OTP Code",
+                    body=html_content,
+                    recipient_list=[email],
+                    from_email=f"{display_name} <{settings.DEFAULT_FROM_EMAIL}>"
+
+                )
+                if not email_sent:
+                    return redirect(request.path)  # Wapas same page
+                
+                messages.success(request, f"An OTP has been sent to {email}. Please check your email.")
+
+                
+                # messages.success(request, "User details updated successfully!")
 
                 # user mil gaya to hi session me id save karo
                 request.session['signup_user_id'] = user.id
@@ -2458,8 +2737,9 @@ def signup_multi_step(request):
             login(request, user)
             
             # Clean session
-            del request.session['signup_user_id']
-            
+            if 'signup_user_id' in request.session:
+                del request.session['signup_user_id']
+                        
             messages.success(request, "Signup completed successfully!")
             
             # Redirect to index/dashboard
@@ -2469,41 +2749,46 @@ def signup_multi_step(request):
 
 import requests
 
+@csrf_exempt
 def send_mobile_otp(request):
-    if request.method == "POST":
-        # Use posted phone number, fallback hardcoded if needed
-        phone = request.POST.get("phone")
-        if not phone:
-            return JsonResponse({"success": False, "message": "Phone number is required."})
+    if request.method != "POST":
+        return JsonResponse({"success": False, "message": "Invalid request. POST required."})
 
-        # Generate 6-digit OTP
-        otp = random.randint(100000, 999999)
+    phone = request.POST.get("phone")
+    if not phone:
+        return JsonResponse({"success": False, "message": "Phone number is required."})
 
-        # Store OTP in session for verification
-        request.session['mobile_otp'] = otp
-        request.session['mobile_number'] = phone
+    # Generate 6-digit OTP
+    otp = random.randint(100000, 999999)
 
-        # ✅ Sinch new SMS endpoint
-        url = f"https://sms.api.sinch.com/xms/v1/{settings.SINCH_APPID}/batches"
-        auth = (settings.SINCH_USERID, settings.SINCH_PASSWORD)
+    # Store OTP in session
+    request.session['mobile_otp'] = otp
+    request.session['mobile_number'] = phone
 
-        payload = {
-            "from": settings.SINCH_APPID,
-            "to": [str(phone)],
-            "body": f"Your OTP code is {otp}"
-        }
+    # Message to send
+    message = f"Your OTP code is {otp}"
 
-        try:
-            response = requests.post(url, json=payload, auth=auth, timeout=10)
-            response.raise_for_status()
-            return JsonResponse({"success": True, "message": "OTP sent successfully!"})
-        except requests.exceptions.RequestException as e:
-            # Detailed error for debugging
-            return JsonResponse({"success": False, "message": f"Failed to send OTP. {str(e)}"})
+    # Sinch SMS GET API
+    sms_sender_id = settings.SMS_SENDER_ID
+    send_sms_url = (
+        "https://push3.aclgateway.com/servlet/"
+        "com.aclwireless.pushconnectivity.listeners.TextListener?"
+        f"appid={settings.SINCH_APPID}"
+        f"&userId={settings.SINCH_USERID}"
+        f"&pass={settings.SINCH_PASSWORD}"
+        "&contenttype=1"
+        f"&from={sms_sender_id}"
+        f"&to={phone}"
+        f"&text={message}"
+        "&alert=1&selfid=true"
+    )
 
-    return JsonResponse({"success": False, "message": "Invalid request."})
-
-
+    try:
+        response = requests.get(send_sms_url, timeout=10)
+        # You can log response if needed
+        return JsonResponse({"success": True, "message": "OTP sent successfully!", "response": response.text})
+    except requests.exceptions.RequestException as e:
+        return JsonResponse({"success": False, "message": f"Failed to send OTP: {str(e)}"})
 
 def user_login1(request):
     step = int(request.POST.get('step', 0)) if request.method == 'POST' else 0
@@ -2545,33 +2830,29 @@ def user_login1(request):
 
             user = authenticate(request, username=email, password=password)
             if user:
-                # Password correct, move to next step
-                context['stepInput'] = 3
-                phone = getattr(user, 'phone', '')
-                context['phone_prefill'] = phone[-4:] if phone else ''
-                messages.success(request, "Password verified! Please select verification method.")
-                return render(request, 'esign/login.html', context)
+                
+                try:
+                    phone = user.profile.phone
+                except Profile.DoesNotExist:
+                    phone = None  # or your default number
+                print("📞 Phone:", phone)
+
+                if phone:
+                    # Password correct, user has phone number → continue verification
+                    context['stepInput'] = 3
+                    context['phone_prefill'] = phone[-4:]  # last 4 digits
+                    messages.success(request, "Password verified! Please select verification method.")
+                    return render(request, 'esign/login.html', context)
+                else:
+                    # User has no phone number → login and redirect to index
+                    messages.success(request, "Password verified! Redirecting to dashboard.")
+                    login(request, user)  # Django login
+                    return redirect('index')  # redirect to index page
             else:
-                # Password incorrect, stay on step 2
-                messages.success(request, "Incorrect password. Try again.")
-                context['stepInput'] = 3
-                # context['phone_prefill'] = user.phone
+                # Password incorrect
+                messages.error(request, "Incorrect password. Try again.")
+                context['stepInput'] = 2
                 return render(request, 'esign/login.html', context)
-
-        # 🧩 Step 2 → Password login fallback
-        # elif step == 2:
-        #     email = request.POST.get('email') or request.session.get('login_email')
-        #     password = request.POST.get('password')
-
-        #     user = authenticate(request, username=email, password=password)
-        #     if user:
-        #         login(request, user)
-        #         messages.success(request, "Login successful.")
-        #         return redirect('dashboard')
-        #     else:
-        #         messages.error(request, "Invalid email or password.")
-        #         context['stepInput'] = 2
-        #         return render(request, 'esign/login.html', context)
 
         # 🧩 Step 3 → Optional: Phone/email verification choice, etc.
         elif step == 2:
@@ -2586,11 +2867,17 @@ def user_login1(request):
                 context['stepInput'] = 4  # For example, back to OTP step
                 otp = random.randint(100000, 999999)
                 request.session["login_otp"] = otp
-                if request.user.is_authenticated:
-                    phone = getattr(request.user, 'phone', '')
-                    context['phone_prefill'] = phone[-4:] if phone else ''
-                else:
-                    context['phone_prefill'] = ''
+                try:
+                    user = User.objects.get(email=email)
+                    phone = user.profile.phone
+                except Profile.DoesNotExist:
+                    phone = None  # or your default number
+                print("📞 Phone:", phone)
+                context['phone_prefill'] = phone[-4:] if phone else ''
+                # if request.user.is_authenticated:
+                    
+                # else:
+                #     context['phone_prefill'] = ''
 
 
             return render(request, 'esign/login.html', context)

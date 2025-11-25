@@ -1,20 +1,25 @@
-# yourapp/utils/email_utils.py
+# utils/email_helper.py
+from django.core.mail import EmailMessage
+from django.contrib import messages
+from smtplib import SMTPRecipientsRefused, SMTPAuthenticationError
 
-def get_from_email(request=None, doc=None):
-    """
-    Returns the best possible 'from_email' for sending emails.
-    Priority:
-    1. Logged-in user's email (if request.user is authenticated)
-    2. Document owner's email (if provided)
-    3. Default no-reply address
-    """
-    # Case 1: Logged-in user
-    if request and hasattr(request, "user") and request.user.is_authenticated and request.user.email:
-        return request.user.email
+def send_email_safe(request, subject, body, recipient_list, from_email):
+    email1 = EmailMessage(
+        subject=subject,
+        body=body,
+        from_email=from_email,
+        to=recipient_list
+    )
+    email1.content_subtype = "html"
 
-    # Case 2: Document owner
-    if doc and hasattr(doc, "owner") and getattr(doc.owner, "email", None):
-        return doc.owner.email
-
-    # Case 3: Fallback
-    return "no-reply@esign.com"
+    try:
+        email1.send(fail_silently=False)
+        return True
+    except SMTPAuthenticationError:
+        messages.success(request, "Email authentication failed. Check email credentials.")
+    except SMTPRecipientsRefused:
+        messages.success(request, "Recipient email address is invalid.")
+    except Exception as e:
+        messages.success(request, "Something went wrong while sending email.")
+        print("EMAIL ERROR:", str(e))
+    return False

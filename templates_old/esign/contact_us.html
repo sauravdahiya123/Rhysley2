@@ -1,0 +1,100 @@
+{% extends 'esign/base.html' %}
+{% load static %}
+{% block content %}
+
+
+<body>
+        
+    {% if messages %}
+      <div class="mb-3">
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+
+
+    <div class="page-wrapper">
+
+        <!-- Page Content-->
+        <!-- <div class="page-content"> -->
+            <div class="container-fluid">
+                <!-- <div class="row">
+                    <div class="col-sm-12">
+                        <div class="page-title-box d-md-flex justify-content-md-between align-items-center">
+                            <div>
+                                <h4 class="page-title mb-1">Quick Actions</h4>
+                                <p class="text-muted mb-0 fw-normal fs-12">Streamline your document workflow with our comprehensive software</p>
+                            </div>
+                            <div class="">
+                                <ol class="breadcrumb mb-0">
+                                    <li class="breadcrumb-item"><a href="#">E-Sign</a>
+                                    </li>
+                                    <li class="breadcrumb-item active">Dashboard</li>
+                                </ol>
+                            </div>                            
+                        </div>
+                    </div>
+                    </div> -->
+                <div class="row justify-content-center">
+                    <!-- <div class="col-md-4">
+                        <h2 class="mb-4">Questions? Let's Talk.</h2>    
+                        <div class="vertical-line mb-4 ms-2 d-none d-sm-block"></div>
+                        
+
+                    </div> --> <!--end col-->
+                    <div class="col-md-6 offset-md-1">
+                        <h2 class="mb-4">Questions? Let's Talk.</h2>
+                       <form method="post" action="" class="mb-4">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="inputContactName" class="form-label">Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" required="" id="inputContactName" name="inputContactName">
+                        </div>
+                        <div class="mb-3">
+                            <label for="inputContactEmail" class="form-label">Email <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" required="" id="inputContactEmail" name="inputContactEmail">
+                        </div>
+                        <div class="mb-3">
+                            <label for="inputContactPhone" class="form-label">Phone Number <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" required="" id="inputContactPhone" name="inputContactPhone">
+                        </div>
+                        <div class="mb-3">
+                            <label for="inputContactCompanyName" class="form-label">Company Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" required="" id="inputContactCompanyName" name="inputContactCompanyName">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Submit Contact Form</button>
+                    </form>
+
+                        <p class="position-relative ps-4"><a href="mailto:contact@eazeesign.com" class="d-block"><i class="iconoir-mail fs-18 me-1 position-absolute start-0 top-0"></i> contact@eazeesign.com</a></p>
+
+                        <p class="position-relative ps-4 pe-0 pe-md-5"><i class="iconoir-map-pin fs-18 me-1 position-absolute start-0 top-0" style="top:5px;"></i> B-1/E-23, Mohan Co-Operative Industrial Area, Mathura Road, Delhi-110044, India</p>
+                    </div><!--end col-->
+                    
+                </div><!--end row-->
+                
+            </div><!-- container -->
+
+        </div>
+        <!-- end page content -->
+
+    <!-- end page-wrapper -->
+
+    <!-- Javascript  -->
+    <!-- vendor js -->
+    
+    <script src="assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/libs/simplebar/simplebar.min.js"></script>
+    <script src="assets/js/app.js"></script>
+
+</body>
+<!--end body-->
+
+</html>
+
+
+{% endblock %}

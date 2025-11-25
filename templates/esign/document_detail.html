@@ -65,6 +65,31 @@
 
   </style>
 <!-- Document Sign Area -->
+{% if messages %}
+  <div class="d-flex justify-content-center mt-3">
+    {% for message in messages %}
+      {% if forloop.last %}
+        <div id="autoDismissAlert" class="alert alert-{{ message.tags }} alert-dismissible fade show text-center" role="alert" style="min-width: 300px;">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+
+  <script>
+    setTimeout(() => {
+      const alert = document.getElementById('autoDismissAlert');
+      if (alert) {
+        const bsAlert = new bootstrap.Alert(alert);
+        bsAlert.close();
+      }
+    }, 2000); // 2 seconds
+  </script>
+{% endif %}
+
+
+
 <div class="row justify-content-center">
   <div class="col-md-12 col-lg-3">
     <div class="card position-sticky top-0">
@@ -90,10 +115,10 @@
           <div class="signature-template btn btn-outline-secondary border-dashed mb-2" data-type="date" id="template-date">
             <i class="fas fa-calendar-alt me-2"></i> Date Signed
           </div>
-
+<!-- 
           <div class="signature-template btn btn-outline-secondary border-dashed mb-2" data-type="company-stamp" id="template-company-stamp">
             <i class="bi bi-building me-1"></i> Company Stamp
-          </div>
+          </div> -->
 
       <!-- <div class="signature-template btn btn-outline-secondary border-dashed mb-2" data-type="company-stamp" id="template-company-stamp">
         <i class="bi bi-building me-1"></i> Company Stamp
@@ -143,9 +168,8 @@
         <i class="bi bi-building me-1"></i> Company Stamp
       </div> -->
 
-      <hr>
-      <h6>Select Allowed Pages</h6>
-      <div id="page-selector"></div> 
+      <h6 hidden>Select Allowed Pages</h6>
+      <div id="page-selector" hidden></div> 
 
     </div>
   </div>
@@ -277,6 +301,7 @@ document.addEventListener("input", function(e) {
             id="signing-form">
             {% csrf_token %}
             <input type="hidden" name="boxes" id="boxes-input"> <!-- JSON boxes -->
+<input type="hidden" id="box-dragged" name="box_dragged" value="">
 
             
 
@@ -311,6 +336,10 @@ document.addEventListener("input", function(e) {
   Customize
 </button>
 
+  <div class="col-md-5">
+    <label for="security_token" class="form-label">Security Token</label>
+    <input type="text" class="form-control" id="security_token" name="security_token" >
+  </div>
 <!-- Hidden advanced options -->
 <div class="row mb-3" id="advancedOptions" style="display: none;">
 
@@ -329,10 +358,7 @@ document.addEventListener("input", function(e) {
   </div>
 
   <!-- Security Token -->
-  <div class="col-md-5">
-    <label for="security_token" class="form-label">Security Token</label>
-    <input type="text" class="form-control" id="security_token" name="security_token" >
-  </div>
+
 
 
   <div class="col-md-3 d-flex align-items-center">
@@ -391,6 +417,15 @@ document.addEventListener("input", function(e) {
 function validateAndSerializeRecipients(event) {
     event.preventDefault(); // stop default submission
 
+       const boxDraggedInput = document.getElementById("box-dragged");
+    
+    if (!boxDraggedInput.value || boxDraggedInput.value == "0") {
+        // e.preventDefault();
+        alert("Please drag at least 1 box on the document.");
+        return;
+    }
+
+
     const form = document.getElementById('signing-form');
 
     // 1️⃣ Browser HTML5 validation
@@ -442,6 +477,7 @@ function validateAndSerializeRecipients(event) {
             id="signing-form-postion">
             {% csrf_token %}
             <input type="hidden" name="boxes" id="boxes-input-postion"> <!-- JSON boxes -->
+<input type="hidden" id="box-dragged-order" name="box_dragged" value="">
 
   <div id="bulk-list">
     <div class="bulk-item d-flex mb-2">
@@ -503,7 +539,7 @@ document.addEventListener("click", function(e) {
  -->
 
 <div class="d-flex justify-content-end mt-3">
-    <button type="submit" class="btn btn-primary" onclick="validateAndSerialize(event)">
+    <button type="button" class="btn btn-primary" onclick="validateAndSerialize(event)">
         <i class="bi bi-send me-1"></i> Send Order Signing Link
     </button>
 </div>
@@ -511,6 +547,13 @@ document.addEventListener("click", function(e) {
 // Function to validate the form before serializing
 function validateAndSerialize(event) {
     event.preventDefault(); // Stop immediate submission
+  const boxDraggedInput = document.getElementById("box-dragged-order");
+    
+    if (!boxDraggedInput.value || boxDraggedInput.value == "0") {
+        // e.preventDefault();
+        alert("Please drag at least 1 box on the document.");
+        return;
+    }
 
     const form = document.getElementById('signing-form-postion');
 
@@ -930,6 +973,24 @@ templates.forEach(template => {
     draggingBox.classList.add('sig-box', 'dragging');
     draggingBox.dataset.type = template.dataset.type;
     pdfContainer.appendChild(draggingBox);
+    const boxDraggedInput = document.getElementById('box-dragged');
+        if (boxDraggedInput) {
+            let currentValue = parseInt(boxDraggedInput.value) || 0;
+
+            // Increment
+            boxDraggedInput.value = currentValue + 1;
+        }
+                  
+
+      const boxDraggedInputbulk = document.getElementById('box-dragged-order');
+      if (boxDraggedInputbulk) {
+          // Current value as number, default 0
+          let currentValue = parseInt(boxDraggedInputbulk.value) || 0;
+
+          // Increment by 1
+          boxDraggedInputbulk.value = currentValue + 1;
+      }
+
 
   });
 });
@@ -1063,6 +1124,17 @@ function makeDraggable(box, pageDiv){
   deleteBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     box.remove();
+    const boxDraggedInput = document.getElementById('box-dragged');
+if (boxDraggedInput) {
+    // Current value as number, default 0
+    let currentValue = parseInt(boxDraggedInput.value) || 0;
+
+    // Decrement by 1, but not below 0
+    boxDraggedInput.value = Math.max(0, currentValue - 1);
+}
+
+
+        
   });
 
     // Resize

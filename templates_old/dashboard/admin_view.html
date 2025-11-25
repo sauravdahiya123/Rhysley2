@@ -1,0 +1,299 @@
+{% extends 'esign/base.html' %}
+{% load static %}
+{% block content %}
+
+
+<body>
+        
+    {% if messages %}
+      <div class="mb-3">
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+
+
+   
+    <div class="page-wrapper">
+
+        <!-- Page Content-->
+            <div class="container-fluid">
+                <div class="row">
+                    <div class="col-sm-12">
+                        <div class="page-title-box d-md-flex justify-content-md-between align-items-center pt-0">
+                            <div>
+                                <h4 class="page-title mb-1">Admin Dashboard</h4>
+                                <!-- <p class="text-muted mb-0 fw-normal fs-12">Streamline your document workflow with our comprehensive software</p> -->
+                            </div>
+                        </div><!--end page-title-box-->
+                    </div><!--end col-->
+                </div><!--end row-->
+                
+                
+                <div class="row justify-content-center">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <div class="row align-items-center">
+                                        <div class="card border-0 mb-0 shadow-none">
+                                            <!-- start table search form--> 
+                                              <form class="row align-items-center" method="get">
+    <div class="col-12 col-md-auto mb-2 mb-md-0">
+        <input type="text" name="search_field" class="form-control" placeholder="Search" value="{{ search_field|default:'' }}">
+    </div>
+
+    <div class="col-12 col-md-auto mb-2 mb-md-0">
+        <select name="category" id="category" class="form-select">
+            <option value="">Select Plan</option>
+            <option value="Free" {% if category == "Free" %}selected{% endif %}>Free</option>
+            <option value="Standard" {% if category == "Standard" %}selected{% endif %}>Standard</option>
+            <option value="Business Pro" {% if category == "Business Pro" %}selected{% endif %}>Business Pro</option>
+            <option value="Enhanced Plan" {% if category == "Enhanced Plan" %}selected{% endif %}>Enhanced Plan</option>
+        </select>
+    </div>
+
+    <div class="col-12 col-md-auto mb-2 mb-md-0">
+        <label class="form-label visually-hidden" for="inputStatusSearch">Status</label>
+        <select name="status" id="inputStatusSearch" class="form-select">
+            <option value="">Select Status</option>
+            <option value="Active" {% if status == "Active" %}selected{% endif %}>Active</option>
+            <option value="Inactive" {% if status == "Inactive" %}selected{% endif %}>Inactive</option>
+        </select>
+    </div>
+
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary">Search</button>
+    </div>
+
+    <div class="col-auto">
+        <a href="{% url 'dashboard:user_list' %}" class="btn btn-outline-secondary">Clear</a>
+    </div>
+</form>
+
+
+                                            </div>
+                                    </div>  <!--end row-->                                  
+                                </div><!--end card-header-->
+                                <div class="card-body pt-0">
+                                    <div class="table-responsive">
+                                        <table class="table mb-3 table-centered border-bottom table-hover">
+                                            <thead class="table-light">
+                                            <tr>
+                                                <th>S. No.</th>
+                                                <th>Username</th>
+                                                <th>Status</th>
+                                                <th>Plan</th>
+                                                <th>User Since</th>
+                                                <th>Email</th>
+                                                <th>Phone</th>
+                                                <th>Location</th>
+                                                <!-- <th>Document Type</th> -->
+                                                <th class="text-end">Action</th>
+                                            </tr>
+                                            </thead>
+                                            {% for user in users %}
+        {% with subs=user.subscription_set.all %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ user.get_full_name|default:user.username }}</td>
+            <td>
+                {% if subs %}
+                    {% for sub in subs %}
+                        <button class="btn btn-sm 
+                            {% if sub.status == 'active' %}btn-success
+                            {% elif sub.status == 'pending' %}btn-warning
+                            {% elif sub.status == 'failed' %}btn-danger
+                            {% else %}btn-secondary{% endif %}" 
+                            data-bs-toggle="modal" data-bs-target="#subModal{{ sub.id }}">
+                            {{ sub.status|capfirst }}
+                        </button>
+                    {% endfor %}
+                {% else %}
+                    <span class="badge bg-secondary">No Subscription</span>
+                {% endif %}
+            </td>
+            <td>{{ subs.first.plan|default:"-"|capfirst }}</td>
+            <td>{{ user.date_joined|date:"d/m/Y" }}</td>
+     
+            <td>{{ user.email }}</td>
+            <td>{{ user.profile.phone|default:"-" }}</td>
+             <td>
+            {% if subs %}
+                {{ subs.first.location|default:"-" }}
+            {% else %}
+                -
+            {% endif %}
+        </td>
+            <td class="text-end">
+                <!-- <a href="#" class="btn btn-info btn-sm"><i class="fas fa-eye"></i></a> -->
+                <!-- <a href="#" class="btn btn-success btn-sm ms-1"><i class="fas fa-download"></i></a> -->
+               <form method="post" action="{% url 'dashboard:delete_user' user.id %}" class="d-inline">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger btn-sm ms-1">
+        <i class="fas fa-trash-alt"></i>
+    </button>
+</form>
+
+            </td>
+        </tr>
+
+        {% for sub in subs %}
+        <!-- Modal for each subscription -->
+        <div class="modal fade" id="subModal{{ sub.id }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Subscription Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p><strong>Plan:</strong> {{ sub.plan|capfirst }}</p>
+                        <p><strong>Status:</strong> {{ sub.status|capfirst }}</p>
+                        <p><strong>Seats:</strong> {{ sub.seats|default:"-" }}</p>
+                        <p><strong>Start Date:</strong> {{ sub.start_date|date:"d/m/Y H:i"|default:"-" }}</p>
+                        <p><strong>End Date:</strong> {{ sub.end_date|date:"d/m/Y H:i"|default:"-" }}</p>
+                        <p><strong>Amount:</strong> 
+                            {% if sub.amount_cents %}
+                                {{ sub.amount_cents|floatformat:2 }} {{ sub.currency|upper }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </p>
+                       
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        {% endwith %}
+        {% endfor %}
+                                            
+                                            </tbody>
+                                        </table><!--end /table-->
+                                        
+                                       
+
+                                    </div><!--end /tableresponsive-->
+                                  <div class="row align-items-center">
+    <div class="col">
+        <div class="datatable-info">
+            Showing {{ users.start_index }} to {{ users.end_index }} of {{ users.paginator.count }} entries
+        </div>
+    </div>
+    <div class="col-auto">
+        <nav aria-label="Page navigation example">
+            <ul class="pagination justify-content-end mb-0">
+                {% if users.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ users.previous_page_number }}&search_field={{ search_field }}&category={{ plan_filter }}&status={{ status_filter }}">Previous</a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">Previous</span></li>
+                {% endif %}
+
+                {% for num in users.paginator.page_range %}
+                    {% if users.number == num %}
+                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% else %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}&search_field={{ search_field }}&category={{ plan_filter }}&status={{ status_filter }}">{{ num }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if users.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ users.next_page_number }}&search_field={{ search_field }}&category={{ plan_filter }}&status={{ status_filter }}">Next</a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">Next</span></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+</div>
+
+                                </div><!--end card-body--> 
+                            </div><!--end card--> 
+                        </div> <!--end col-->                                                     
+                    </div><!--end row-->
+            </div><!-- container -->
+
+            <!--Start Rightbar-->
+            
+            <!--end Rightbar-->
+        </div>
+
+    <!-- end page-wrapper -->
+
+    <!-- Javascript  -->
+    <!-- vendor js -->
+    
+    <script src="assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/libs/simplebar/simplebar.min.js"></script>
+    <script src="assets/js/app.js"></script>
+
+    <script>
+  function initListGridToggle(listBtnId, gridBtnId, containerId) {
+    const listBtn = document.getElementById(listBtnId);
+    const gridBtn = document.getElementById(gridBtnId);
+    const cards = document.querySelectorAll(`#${containerId} > div`);
+
+    function smoothToggle(action) {
+      cards.forEach(card => {
+        // Fade out
+        card.classList.add('fade-transition');
+
+        // Wait for fade-out before switching layout
+        setTimeout(() => {
+          if (action === 'list') {
+            card.classList.remove('col-6');
+            card.classList.add('col-12');
+          } else {
+            card.classList.remove('col-12');
+            card.classList.add('col-6');
+          }
+
+          // Fade back in
+          requestAnimationFrame(() => {
+            card.classList.remove('fade-transition');
+          });
+        }, 150); // slightly shorter than CSS duration
+      });
+    }
+
+    // List View
+    listBtn.addEventListener('click', () => {
+      smoothToggle('list');
+      listBtn.classList.add('active');
+      gridBtn.classList.remove('active');
+    });
+
+    // Grid View
+    gridBtn.addEventListener('click', () => {
+      smoothToggle('grid');
+      gridBtn.classList.add('active');
+      listBtn.classList.remove('active');
+    });
+  }
+
+  // Initialize both toggles
+  initListGridToggle('listViewBtn', 'gridViewBtn', 'productContainer');
+  initListGridToggle('listViewBtnNew', 'gridViewBtnNew', 'productContainerNew');
+</script>
+
+</body>
+<!--end body-->
+
+</html>
+
+
+{% endblock %}

@@ -1,0 +1,264 @@
+{% extends 'esign/base.html' %}
+{% load static %}
+{% block content %}
+
+
+<body>
+        
+    {% if messages %}
+      <div class="mb-3">
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+
+
+    <div class="page-wrapper">
+
+        <!-- Page Content-->
+        <!-- <div class="page-content"> -->
+            <div class="container-fluid">
+                <!-- <div class="row">
+                    <div class="col-sm-12">
+                        <div class="page-title-box d-md-flex justify-content-md-between align-items-center">
+                            <div>
+                                <h4 class="page-title mb-1">Quick Actions</h4>
+                                <p class="text-muted mb-0 fw-normal fs-12">Streamline your document workflow with our comprehensive software</p>
+                            </div>
+                            <div class="">
+                                <ol class="breadcrumb mb-0">
+                                    <li class="breadcrumb-item"><a href="#">E-Sign</a>
+                                    </li>
+                                    <li class="breadcrumb-item active">Dashboard</li>
+                                </ol>
+                            </div>                            
+                        </div>
+                    </div>
+                    </div> -->
+                <div class="row justify-content-center">
+                    <div class="col-12 text-center"><h1 class="mb-4">Agreements made effortless</h1></div>
+                </div>
+                <div class="row justify-content-center align-items-stretch">
+                <div class="col-sm-6 col-md-3">
+                    <section class="pricing-plans-card rounded card h-100 position-relative">
+                        <div class="pricing-plans-top text-center bg-light border-bottom p-3 rounded">
+                            <h3 class="">Personal</h3>
+                            <div data-id="subtitle" class="small">For individuals and sole proprietors with basic e-signature needs.</div>
+
+                            <div id="eazeeSignPersonalPlan" class="d-flex py-3 justify-content-center align-items-center">
+                                <div class="plan-value display-4 me-2 lh-1 fw-bold"><sup class="fs-14">$</sup>10</div>
+                                <div class="css-defxzi text-start">
+                                    <div class="small">/month</div>
+                                    <div class="small">$120 billed annually</div>
+                                </div>
+                            </div>
+
+                            <a aria-label="Buy Now" role="link" href="#" data-context="plan-lineup" data-id="PersonalPlanCard" class="btn btn-primary w-100 mb-2 py-2 fs-18" aria-disabled="false">Buy Now</a>
+                            <div class="small">Additional tax may apply</div>
+                        </div>
+                        <div class="pricing-plans-bottom p-3">
+                            <p><strong>Core benefits include:</strong></p>
+
+                            <ul class="ps-0 m-0">
+                                <li class="pb-2 d-flex"><span class="me-2 d-inline-block"><i class="fas fa-check"></i></span> <span>Send 5 envelopes per month (up to 99 signatures per envelope)</span></li>
+                                <li class="pb-2 d-flex"><span class="me-2 d-inline-block"><i class="fas fa-check"></i></span> <span>Securely store and access all your agreements in one place</span></li>
+                                <li class="pb-2 d-flex"><span class="me-2 d-inline-block"><i class="fas fa-check"></i></span> <span>Speed up agreement completion with AI-assisted summary</span></li>
+                                <li class="pb-2 d-flex"><span class="me-2 d-inline-block"><i class="fas fa-check"></i></span> <span>Save hours of manual setup with reusable templates</span></li>
+                                <li class="pb-2 d-flex"><span class="me-2 d-inline-block"><i class="fas fa-check"></i></span> <span>Stay in the tools you already use with 1000+ integrations</span></li>
+                            </ul>
+                        </div>
+                        <button class="btn btn-outline-primary w-100 mt-3 position-absolute bottom-0 start-0">See All Features</button>
+                    </section>
+                </div>
+                <!--  -->
+                <div class="col-sm-6 col-md-3">
+                    <section class="pricing-plans-card rounded card h-100 position-relative">
+                        <div class="pricing-plans-top text-center bg-light border-bottom p-3 rounded">
+                            <h3 class="">Standard</h3>
+                            <div data-id="subtitle" class="small">For small to medium teams that need to send, sign and collaborate.</div>
+
+                            <div id="eazeeSignStandardPlan" class="d-flex py-3 justify-content-center align-items-center">
+                                <div class="plan-value display-4 me-2 lh-1 fw-bold"><sup class="fs-14">$</sup>25</div>
+                                <div class="css-defxzi text-start">
+                                    <div class="small">/month per user</div>
+                                    <div class="small">$300 billed annually</div>
+                                </div>
+                            </div>
+
+                            <a aria-label="Buy Now" role="link" href="#" data-context="plan-lineup" data-id="PersonalPlanCard" class="btn btn-primary w-100 mb-2 py-2 fs-18" aria-disabled="false">Buy Now</a>
+                            <div class="small">Additional tax may apply</div>
+                        </div>
+                        <div class="pricing-plans-bottom p-3">
+                            <p><strong>All Personal benefits, plus:</strong></p>
+
+                            <ul class="ps-0 m-0">
+                                <li class="pb-2 d-flex"><span class="me-2 d-inline-block"><i class="fas fa-check"></i></span> <span>Send a total of 100 envelopes per user per year</span></li>
+                                <li class="pb-2 d-flex"><span class="me-2 d-inline-block"><i class="fas fa-check"></i></span> <span>Standardize agreements by sharing templates with your team</span></li>
+                                <li class="pb-2 d-flex"><span class="me-2 d-inline-block"><i class="fas fa-check"></i></span> <span>Increase collaboration with real-time commenting</span></li>
+                                <li class="pb-2 d-flex"><span class="me-2 d-inline-block"><i class="fas fa-check"></i></span> <span>Avoid delays by enabling delegate signing</span></li>
+                                <li class="pb-2 d-flex"><span class="me-2 d-inline-block"><i class="fas fa-check"></i></span> <span>Close deals faster with 5 SMS deliveries <strong>(one-time bonus)</strong></span></li>
+                                <li class="pb-2 d-flex"><span class="me-2 d-inline-block"><i class="fas fa-check"></i></span> <span>Reduce fraud risk with 5 identity verifications <strong>(one-time bonus)</strong></span></li>
+                            </ul>
+
+                            
+                        </div>
+                        <button class="btn btn-outline-primary w-100 mt-3 position-absolute bottom-0 start-0">See All Features</button>
+                    </section>
+                </div>
+                <!--  -->
+                <div class="col-sm-6 col-md-3">
+                    <section class="pricing-plans-card rounded card h-100 position-relative">
+                        <div class="pricing-plans-top text-center bg-light border-bottom p-3 rounded">
+                            <h3 class="">Business Pro</h3>
+                            <div data-id="subtitle" class="small">For automating and optimizing agreements with advanced features.</div>
+
+                            <div id="eazeeSignBusinessProPlan" class="d-flex py-3 justify-content-center align-items-center">
+                                <div class="plan-value display-4 me-2 lh-1 fw-bold"><sup class="fs-14">$</sup>40</div>
+                                <div class="css-defxzi text-start">
+                                    <div class="small">/month per user</div>
+                                    <div class="small">$480 billed annually</div>
+                                </div>
+                            </div>
+
+                            <a aria-label="Buy Now" role="link" href="#" data-context="plan-lineup" data-id="PersonalPlanCard" class="btn btn-primary w-100 mb-2 py-2 fs-18" aria-disabled="false">Buy Now</a>
+                            <div class="small">Additional tax may apply</div>
+                        </div>
+                        <div class="pricing-plans-bottom p-3">
+                            <p><strong>All Standard benefits, plus:</strong></p>
+
+                            <ul class="ps-0 m-0">
+                                <li class="pb-2 d-flex"><span class="me-2 d-inline-block"><i class="fas fa-check"></i></span> <span>Send a total of 100 envelopes per user per year</span></li>
+                                <li class="pb-2 d-flex"><span class="me-2 d-inline-block"><i class="fas fa-check"></i></span> <span>Simplify data collection with mobile-friendly web forms</span></li>
+                                <li class="pb-2 d-flex"><span class="me-2 d-inline-block"><i class="fas fa-check"></i></span> <span>Collect payments during the signing process</span></li>
+                                <li class="pb-2 d-flex"><span class="me-2 d-inline-block"><i class="fas fa-check"></i></span> <span>Enable intuitive signing with interactive form fields</span></li>
+                                <li class="pb-2 d-flex"><span class="me-2 d-inline-block"><i class="fas fa-check"></i></span> <span>Increase accuracy with real-time data verification as signers type</span></li>
+                                <li class="pb-2 d-flex"><span class="me-2 d-inline-block"><i class="fas fa-check"></i></span> <span>Save time by bulk sending to multiple recipients at one time</span></li>
+                            </ul>
+                        </div>
+                        <button class="btn btn-outline-primary w-100 mt-3 position-absolute bottom-0 start-0">See All Features</button>
+                    </section>
+                </div>
+                <!--  -->
+                <div class="col-sm-6 col-md-3">
+                    <section class="pricing-plans-card rounded card h-100 position-relative">
+                        <div class="pricing-plans-top text-center bg-light border-bottom p-3 rounded">
+                            <h3 class="">Enhanced plans</h3>
+                            <div data-id="subtitle" class="small mb-3">Speak with an expert to customize an eSignature or IAM plan that meets your exact business needs.</div>
+
+                            <!-- <div id="eazeeSignPersonalPlan" class="d-flex py-3 justify-content-center align-items-center">
+                                <div class="plan-value display-4 me-2 lh-1 fw-bold"><sup class="fs-14">$</sup>10</div>
+                                <div class="css-defxzi text-start">
+                                    <div class="small">/month</div>
+                                    <div class="small">$120 billed annually</div>
+                                </div>
+                            </div> -->
+
+                            <p class="position-relative mb-3 ps-0"><a href="mailto:contact@eazeesign.com"><i class="iconoir-mail fs-18 me-1 position-absolute start-0 top-0"></i> contact@eazeesign.com</a></p>
+
+                            <a aria-label="Buy Now" role="link" href="#" data-context="plan-lineup" data-id="PersonalPlanCard" class="btn btn-primary w-100 mb-2 py-2 fs-18" aria-disabled="false">Contact Sales</a>
+                            <!-- <div class="small">Additional tax may apply</div> -->
+                        </div>
+                        <div class="pricing-plans-bottom p-3">
+                            <p><strong>Additional benefits include:</strong></p>
+
+                            <ul class="ps-0 m-0">
+                                <li class="pb-2 d-flex"><span class="me-2 d-inline-block"><i class="fas fa-check"></i></span> <span>Customize your envelope limits to fit your exact business needs</span></li>
+                                <li class="pb-2 d-flex"><span class="me-2 d-inline-block"><i class="fas fa-check"></i></span> <span>Maintain oversight with centralized org management</span></li>
+                                <li class="pb-2 d-flex"><span class="me-2 d-inline-block"><i class="fas fa-check"></i></span> <span>Get 24/7 live technical support</span></li>
+                                <li class="pb-2 d-flex"><span class="me-2 d-inline-block"><i class="fas fa-check"></i></span> <span>Ensure compliance with all security configurations</span></li>
+                                <li class="pb-2 d-flex"><span class="me-2 d-inline-block"><i class="fas fa-check"></i></span> <span>Secure and simplify user logins with single sign-on (SSO)</span></li>
+                                <li class="pb-2 d-flex"><span class="me-2 d-inline-block"><i class="fas fa-check"></i></span> <span>Generate documents from within Salesforce</span></li>
+                            </ul>
+                        </div>
+                        <button class="btn btn-outline-primary w-100 mt-3 position-absolute bottom-0 start-0">See All Features</button>
+                    </section>
+                </div>
+                <!--end col-->
+                    
+                    
+                </div><!--end row-->
+                
+            </div><!-- container -->
+
+            <!--Start Rightbar-->
+           
+            <!--end Rightbar-->
+            
+        </div>
+        <!-- end page content -->
+
+    <!-- end page-wrapper -->
+
+    <!-- Javascript  -->
+    <!-- vendor js -->
+    
+    <script src="assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/libs/simplebar/simplebar.min.js"></script>
+
+    <script src="assets/libs/apexcharts/apexcharts.min.js"></script>
+    <script src="https://apexcharts.com/samples/assets/irregular-data-series.js"></script>
+    <script src="assets/js/pages/index.init.js"></script>
+    <script src="assets/js/DynamicSelect.js"></script>
+    <script src="assets/js/app.js"></script>
+
+    <script>
+  function initListGridToggle(listBtnId, gridBtnId, containerId) {
+    const listBtn = document.getElementById(listBtnId);
+    const gridBtn = document.getElementById(gridBtnId);
+    const cards = document.querySelectorAll(`#${containerId} > div`);
+
+    function smoothToggle(action) {
+      cards.forEach(card => {
+        // Fade out
+        card.classList.add('fade-transition');
+
+        // Wait for fade-out before switching layout
+        setTimeout(() => {
+          if (action === 'list') {
+            card.classList.remove('col-6');
+            card.classList.add('col-12');
+          } else {
+            card.classList.remove('col-12');
+            card.classList.add('col-6');
+          }
+
+          // Fade back in
+          requestAnimationFrame(() => {
+            card.classList.remove('fade-transition');
+          });
+        }, 150); // slightly shorter than CSS duration
+      });
+    }
+
+    // List View
+    listBtn.addEventListener('click', () => {
+      smoothToggle('list');
+      listBtn.classList.add('active');
+      gridBtn.classList.remove('active');
+    });
+
+    // Grid View
+    gridBtn.addEventListener('click', () => {
+      smoothToggle('grid');
+      gridBtn.classList.add('active');
+      listBtn.classList.remove('active');
+    });
+  }
+
+  // Initialize both toggles
+  initListGridToggle('listViewBtn', 'gridViewBtn', 'productContainer');
+  initListGridToggle('listViewBtnNew', 'gridViewBtnNew', 'productContainerNew');
+</script>
+
+</body>
+<!--end body-->
+
+</html>
+
+
+{% endblock %}

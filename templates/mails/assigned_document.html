@@ -1,0 +1,195 @@
+{% extends "esign/base_email.html" %}
+{% load static %}
+{% block content %}
+
+<!-- Hidden preheader text -->
+<div style="display: none; max-height: 0px; overflow: hidden; mso-hide: all;">
+  {{ assigner_name }} has assigned you a document to sign.
+</div>
+
+<!--  -->
+
+<!-- Outer wrapper -->
+<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin:0; padding:0; background:#f3f4f6;">
+  <tr>
+    <td align="center" style="padding:24px 10px;">
+
+      <!-- Main container -->
+      <!--[if mso]>
+      <table width="600" cellpadding="0" cellspacing="0" border="0">
+      <tr><td>
+      <![endif]-->
+
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"
+        style="max-width:600px; background:#ffffff; margin:0 auto;">
+
+        <!-- Header -->
+        <tr>
+          <td style="padding:25px 25px;">
+
+            <img src="https://app.eazeesign.com/static/assets/images/eazee-sign-logo-final-small.png"
+                 width="187" height="40" alt="EazeeSign Logo" border="0"
+                 style="display:block; outline:none; text-decoration:none; -ms-interpolation-mode:bicubic;">
+          </td>
+        </tr>
+
+        <!-- Body -->
+        <tr>
+          <td style="padding:25px; background:#6500ff;">
+
+            <!-- Title -->
+            <p style="font-size:26px; font-weight:400; color:#ffffff; margin:0 0 15px 0; line-height:1.3;">
+              Hi {{ recipient_name }},
+            </p>
+
+            <p style="font-size:14px; color:#ffffff; margin:0 0 15px 0; line-height:1.4;">
+              {{ assigner_name }} requires your signature on the document "{{ document_title }}"
+            </p>
+
+            <p style="font-size:14px; color:#ffffff; margin:0 0 15px 0; line-height:1.4;">
+              Click below to open the document and complete the signing process.
+            </p>
+
+            <table cellpadding="0" cellspacing="0" width="100%" style="font-size:14px; color:#ffffff; line-height:1.4; margin:0; padding:0;">
+              <tr>
+                <td width="100%" colspan="2" align="center" valign="middle" height="20">&nbsp;</td>
+              </tr>
+              <tr>
+                <td width="40%" align="center" valign="middle" bgcolor="#FFFFFF" height="50"><a href="{{ document_link }}" class="btn-sign"><span style="color: #000000; display: block">Sign Document Now</span></a></td>
+                <td width="60%"></td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="font-size:14px; padding:25px; line-height:1.4;">
+            <p style="font-size:14px; margin:0 0 16px 0; line-height:1.4;">
+              This request was sent securely through EazeeSign. If you were not expecting this document, please contact {{ assigner_name }} directly.
+            </p>
+
+            <p style="font-size:14px; line-height:1.4; margin:0 0 15px 0;">
+              Thanks<br>The EazeeSign Team
+            </p>
+
+          </td>
+        </tr>
+        <!-- Footer -->
+        <tr>
+          <td align="center" style="background:#f8fafc; padding:20px 28px; border-top:1px solid #e5e7eb;">
+            <p style="margin:0; color:#6b7280; font-size:13px; line-height:1.6;">
+              Copyright © EazeeSign <script> document.write(new Date().getFullYear()) </script> All rights reserved.
+            </p>
+          </td>
+        </tr>
+
+      </table>
+
+      <!--[if mso]></td></tr></table><![endif]-->
+
+    </td>
+  </tr>
+</table>
+
+
+<!--  -->
+
+<!-- Outer wrapper -->
+<!-- <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="background-color: #f3f4f6;">
+  <tr>
+    <td align="center" style="padding: 24px 10px;">
+
+      
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"
+        style="max-width: 600px; background-color: #ffffff; margin: 0 auto; border-radius: 8px; overflow: hidden;">
+        
+        
+        <tr>
+          <td style="background-color: #0f172a; padding: 24px 28px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td width="50%">
+                  <img src="{% static 'assets/images/footer-logo-small.png' %}" alt="EazeeSign"
+                       style="height: 36px;">
+                </td>
+                <td width="50%" align="right" style="color: #ffffff; font-size: 12px; opacity: 0.8;">
+                  Document Assignment Notice
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        
+        <tr>
+          <td style="padding: 32px 28px;">
+
+            <h3 style="font-size: 22px; font-weight: 700; color: #0f172a; margin-bottom: 16px;">
+              You've been assigned a document to sign
+            </h3>
+
+            <p style="font-size: 16px; color: #374151; margin-bottom: 20px; line-height: 1.6;">
+              Hello <strong></strong>,<br><br>
+              <strong></strong> has assigned you the following document to sign:
+            </p>
+
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"
+              style="background-color: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 20px;">
+              <tr>
+                <td style="padding: 16px 20px;">
+                  <p style="margin: 0; font-size: 15px; color: #0f172a;">
+                    <strong>Document Title:</strong> 
+                  </p>
+                </td>
+              </tr>
+            </table>
+
+            <p style="font-size: 16px; color: #374151; margin-bottom: 30px; line-height: 1.6;">
+              Click the button below to view and sign the document securely.
+            </p>
+
+            
+            <table width="100%" align="center" cellpadding="0" cellspacing="0" style="margin-bottom: 30px;">
+              <tr>
+                <td align="center">
+                  <a href="{{ document_link }}"
+                     style="background-color: #2563eb; color: #ffffff; font-size: 16px; font-weight: 600;
+                            text-decoration: none; display: inline-block; padding: 14px 30px; border-radius: 6px;">
+                    View & Sign Document
+                  </a>
+                </td>
+              </tr>
+            </table>
+
+            
+            <p style="font-size: 14px; color: #6b7280; margin-bottom: 30px;">
+              If the button doesn't work, copy and paste this link into your browser:<br>
+              <a href="{{ document_link }}" style="color: #2563eb; text-decoration: none; word-break: break-all;">
+                {{ document_link }}
+              </a>
+            </p>
+
+            <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 24px 0;">
+
+            <p style="font-size: 14px; color: #6b7280; line-height: 1.6;">
+              Assigned by: <strong>{{ assigner_name }}</strong><br>
+              Platform: <a href="{{ site_url }}" style="color: #2563eb; text-decoration: none;">EazeeSign</a>
+            </p>
+
+          </td>
+        </tr>
+
+        
+        <tr>
+          <td align="center" style="background-color: #f8fafc; padding: 20px 28px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 13px;">
+            <p style="margin: 0;">© 2025 EazeeSign — All rights reserved.</p>
+            <p style="margin: 0; font-size: 12px;">This is an automated email. Please do not reply.</p>
+          </td>
+        </tr>
+
+      </table>
+
+    </td>
+  </tr>
+</table> -->
+
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends "esign/base_login.html" %}
+{% block content %}
+
+<!-- Hidden button to trigger modal -->
+<button type="button" id="openTokenModal" class="btn btn-primary d-none"
+  data-bs-toggle="modal" data-bs-target="#termsModal">
+  Open Terms Modal
+</button>
+
+<!-- Modal -->
+<div class="modal fade" id="termsModal" tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true"
+     data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-dialog-centered">  <!-- ✅ Centered -->
+    <div class="modal-content">
+      <form method="POST">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title" id="termsModalLabel">Terms & Conditions</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+          <p>Please choose an option:</p>
+
+          <!-- Yes -->
+          <button type="submit" name="decision" value="yes" class="btn btn-success mb-2 w-100">Yes, I want to sign</button>
+
+          <!-- Cancel -->
+          <button type="submit" name="decision" value="cancel" class="btn btn-secondary mb-2 w-100">Cancel</button>
+
+          <!-- Assign toggle -->
+          <button type="button" id="assignBtn" class="btn btn-warning mb-2 w-100">Assign to someone else</button>
+
+          <!-- Assign form -->
+          <div id="assignForm" style="display: none; margin-top:10px;">
+            <input type="text" name="assign_name" class="form-control mb-2" placeholder="Name" required>
+            <input type="email" name="assign_email" class="form-control mb-2" placeholder="Email" required>
+            <button type="submit" name="decision" value="assign" class="btn btn-primary w-100">Assign</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Open modal automatically
+    document.getElementById("openTokenModal").click();
+
+    // Show assign form on button click
+    document.getElementById("assignBtn").addEventListener("click", function() {
+        document.getElementById("assignForm").style.display = "block";
+    });
+});
+</script>
+
+{% endblock %}

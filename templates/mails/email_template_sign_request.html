@@ -1,0 +1,95 @@
+{% extends "esign/base_email.html" %}
+{% load static %}
+{% block content %}
+
+
+<!-- Outer wrapper -->
+<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin:0; padding:0; background:#f3f4f6;">
+  <tr>
+    <td align="center" style="padding:24px 10px;">
+
+      <!-- Main container -->
+      <!--[if mso]>
+      <table width="600" cellpadding="0" cellspacing="0" border="0">
+      <tr><td>
+      <![endif]-->
+
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"
+        style="max-width:600px; background:#ffffff; margin:0 auto;">
+
+        <!-- Header -->
+        <tr>
+          <td style="padding:25px 25px;">
+
+            <img src="https://app.eazeesign.com/static/assets/images/eazee-sign-logo-final-small.png"
+                 width="187" height="40" alt="EazeeSign Logo" border="0"
+                 style="display:block; outline:none; text-decoration:none; -ms-interpolation-mode:bicubic;">
+          </td>
+        </tr>
+
+        <!-- Body -->
+        <tr>
+          <td style="padding:25px; background:#6500ff;">
+
+            <!-- Title -->
+            <p style="font-size:26px; font-weight:400; color:#ffffff; margin:0 0 15px 0; line-height:1.3;">
+              Hello {{name}},
+            </p>
+
+            <p style="font-size:14px; color:#ffffff; margin:0 0 15px 0; line-height:1.4;">
+              This is a confirmation that your document, "{{ doc_title }}", has been successfully sent for signature via EazeeSign.
+            </p>
+
+          </td>
+        </tr>
+        <tr>
+          <td style="font-size:14px; padding:25px; line-height:1.4;">
+            <p style="font-size:14px; margin:0 0 16px 0; line-height:1.4;">
+              What happens next?
+            </p>
+
+
+            <p style="font-size:14px; line-height:1.4; margin:0 0 15px 0;">
+              You will receive an email notification once the document has been successfully signed by the recipients.
+            </p>
+
+            <p style="font-size:14px; line-height:1.4; margin:0 0 15px 0;">
+              Thank you for trusting EazeeSign to handle your important agreements.<br>The EazeeSign Team
+            </p>
+
+            <table cellpadding="0" cellspacing="0" width="100%" style="font-size:14px; color:#ffffff; line-height:1.4; margin:0; padding:0;">
+              <tr>
+                <td width="100%" colspan="2" align="center" valign="middle" height="20">&nbsp;</td>
+              </tr>
+              <tr>
+                <td width="40%" align="center" valign="middle" bgcolor="#000000" height="50"><a href="{{ sign_url }}" class="btn-sign"><span style="color: white; display: block">Sign Document</span></a></td>
+                <td width="60%"></td>
+              </tr>
+            </table>
+
+          </td>
+        </tr>
+        <!-- Footer -->
+        <tr>
+          <td align="center" style="background:#f8fafc; padding:20px 28px; border-top:1px solid #e5e7eb;">
+            <p style="margin:0; color:#6b7280; font-size:13px; line-height:1.6;">
+              Copyright © EazeeSign <script> document.write(new Date().getFullYear()) </script> All rights reserved.
+            </p>
+          </td>
+        </tr>
+
+      </table>
+
+      <!--[if mso]></td></tr></table><![endif]-->
+
+    </td>
+  </tr>
+</table>
+
+{% endblock %}
+
+
+
+
+
+

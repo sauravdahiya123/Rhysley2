@@ -133,7 +133,7 @@
                                                 <th>S. No.</th>
                                                 <th>Document Title</th>
                                                 <th>Category</th>
-                                                <th>Signers Completed</th>
+                                                <th>Signing Progress</th>
                                                 <th>Sign Pending</th>
                                                 <th>Created at</th>
                                                 <th>Link Expired Date</th>
@@ -169,35 +169,51 @@
 }
 
      </style>
-   <td>
+<td>
     {% for f in flows %}
+        
         {% if f.is_signed %}
-            <a href="{{ f.merged_file.url }}" target="_blank" class="d-inline-block me-1 mb-1" title="{{ f.recipient_email }}">
-                <span class="avatar-circle bg-primary text-white fw-bold">
+            <!-- SIGNED -->
+            <a href="{{ f.merged_file.url }}" target="_blank" 
+               class="d-inline-block me-1 mb-1" 
+               title="{{ f.recipient_email }} (Signed)">
+                <span class="avatar-circle bg-success text-white fw-bold">
                     {{ f.recipient_email|slice:":1"|upper }}
                 </span>
             </a>
+
+        {% elif f.is_canceled %}
+            <!-- CANCELED -->
+            <span class="d-inline-block me-1 mb-1" 
+                  title="{{ f.recipient_email }} (cancelled)">
+                <span class="avatar-circle bg-danger text-white fw-bold">
+                    {{ f.recipient_email|slice:":1"|upper }}
+                </span>
+            </span>
+
         {% endif %}
+
     {% empty %}
         N/A
     {% endfor %}
 </td>
-
 
     <!-- Pending Users -->
 <td>
     {% for f in flows %}
-        {% if not f.is_signed %}
-            <a href="#" class="d-inline-block me-1 mb-1" title="{{ f.recipient_email }}">
+        {% if not f.is_signed and not f.is_canceled %}
+            <span class="d-inline-block me-1 mb-1" 
+                  title="{{ f.recipient_email }} (Pending)">
                 <span class="avatar-circle bg-warning text-dark fw-bold">
                     {{ f.recipient_email|slice:":1"|upper }}
                 </span>
-            </a>
+            </span>
         {% endif %}
     {% empty %}
         N/A
     {% endfor %}
 </td>
+
 
 <td>{{ d.created_at }}</td>
 <td>{{ d.valid_until|date:"b d, Y"|title }} Midnight</td>

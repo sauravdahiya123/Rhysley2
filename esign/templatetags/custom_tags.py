@@ -9,6 +9,11 @@ def to_range(start, end):
 
 
 
+# @register.filter
+# def has_pending(flows):
+#     return any(not f.is_signed for f in flows)
+
+
 @register.filter
 def has_pending(flows):
-    return any(not f.is_signed for f in flows)
+    return any((not f.is_signed) and (not f.is_canceled) for f in flows)

@@ -4,14 +4,30 @@
 {% if messages %}
   {% for message in messages %}
     {% if message.tags == 'success' %}
-      <small id="msgg" class="text-success fw-semibold d-block text-center mb-2">{{ message }}</small>
+      <small id="msgg" class="flash-msg text-success fw-semibold d-block text-center mb-2">{{ message }}</small>
     {% elif message.tags == 'info' %}
-      <small id="msgg" class="text-info fw-semibold d-block text-center mb-2">{{ message }}</small>
+      <small id="msgg" class="flash-msg text-info fw-semibold d-block text-center mb-2">{{ message }}</small>
     {% elif message.tags == 'error' %}
-      <small id="msgg" class="text-danger fw-semibold d-block text-center mb-2">{{ message }}</small>
+      <small id="msgg" class="flash-msg text-danger fw-semibold d-block text-center mb-2">{{ message }}</small>
     {% endif %}
   {% endfor %}
 {% endif %}
+
+
+<script>
+// Select all flash messages
+const flashMessages = document.querySelectorAll('.flash-msg');
+
+// Hide after 5 seconds (5000ms)
+flashMessages.forEach(msg => {
+  setTimeout(() => {
+    msg.style.transition = 'opacity 0.5s ease';
+    msg.style.opacity = '0';
+    // Optional: remove from DOM after fade out
+    setTimeout(() => msg.remove(), 500);
+  }, 5000);
+});
+</script>
 
 <div class="d-flex justify-content-center align-items-center">
   <div class="container-fluid">
@@ -46,15 +62,91 @@
               </div>
             </div>
           </div>
-          <div class="row">
-            <div class="col-sm-12 col-md-12">
-              <div class="mb-3">
-                <label class="form-label" for="userPhone">Phone<span style="color: red;"> *</span></label>
-                <input type="text" name="userPhone" class="form-control" placeholder="Phone Number" required
-                value="{{ request.POST.userPhone|default_if_none:'' }}">
-              </div>
-            </div>
-          </div>
+          
+  <div class="mb-3">
+  <label class="form-label fw-bold">Phone <span style="color: red;">*</span></label>
+  <div class="input-group">
+
+    <!-- Country Code Dropdown -->
+    <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="countryDropdown"
+      data-bs-toggle="dropdown" aria-expanded="false" style="min-width: 100px;">
+      <span id="selectedCountry">+91</span>
+    </button>
+
+    <ul class="dropdown-menu p-2" aria-labelledby="countryDropdown"
+      style="max-height: 250px; overflow-y: auto; width: 280px;">
+      <input type="text" class="form-control mb-2" id="countrySearch" placeholder="Search country...">
+      <div id="countryList"></div>
+    </ul>
+
+    <!-- Phone Input -->
+    <input type="text" maxlength="11" onkeyup="validatePhone(this)" minlength="9" pattern="[0-9]*" inputmode="numeric" class="form-control" name="userPhone" placeholder="Phone Number" required>
+
+    <!-- Hidden Country Code -->
+    <input type="hidden" name="countryCode" id="countryCodeInput" value="+91">
+  </div>
+</div>
+
+
+<script>
+   function validatePhone(input) {
+    input.value = input.value.replace(/[^0-9]/g, ''); // alphabets or symbols hatao
+    const code = countryCodeInput.value;
+    const max = phoneRules[code] || 10;
+    if (input.value.length > max) {
+      input.value = input.value.slice(0, max);
+    }
+  }
+  const countryListEl = document.getElementById('countryList');
+  const searchEl = document.getElementById('countrySearch');
+  const selectedCountryEl = document.getElementById('selectedCountry');
+  const countryCodeInput = document.getElementById('countryCodeInput');
+
+  let allCountries = [];
+
+  // Load country list
+  fetch('https://restcountries.com/v3.1/all?fields=name,idd,flags')
+    .then(res => res.json())
+    .then(data => {
+      allCountries = data
+        .filter(c => c.idd && c.idd.root)
+        .sort((a, b) => a.name.common.localeCompare(b.name.common));
+
+      renderCountries(allCountries);
+    })
+    .catch(err => console.error('Error loading country codes:', err));
+
+  function renderCountries(list) {
+    countryListEl.innerHTML = '';
+    list.forEach(country => {
+      const code = country.idd.root + (country.idd.suffixes ? country.idd.suffixes[0] : '');
+      const li = document.createElement('li');
+      li.innerHTML = `<a href="#" class="dropdown-item d-flex align-items-center gap-2">
+        <span>${country.flag || ''}</span>
+        <span>${country.name.common}</span>
+        <span class="ms-auto text-muted">(${code})</span>
+      </a>`;
+      li.querySelector('a').addEventListener('click', (e) => {
+        e.preventDefault();
+        selectedCountryEl.innerHTML = `${country.flag || ''} ${code}`;
+        countryCodeInput.value = code;
+        document.querySelector('.dropdown-menu.show')?.classList.remove('show');
+      });
+      countryListEl.appendChild(li);
+    });
+  }
+
+  // Search filter
+  searchEl.addEventListener('input', function() {
+    const term = this.value.toLowerCase();
+    const filtered = allCountries.filter(c =>
+      c.name.common.toLowerCase().includes(term) ||
+      (c.idd.root + (c.idd.suffixes ? c.idd.suffixes[0] : '')).includes(term)
+    );
+    renderCountries(filtered);
+  });
+</script>
+
           <div class="text-center mt-3">
             <button type="button" class="btn btn-primary w-100" onclick="goToStep(1)">Next</button>
             </div>
@@ -75,6 +167,27 @@
         </div>
       </div>
     </div>
+<script>
+  // Inputs
+  const firstNameInput = document.getElementById('username');
+  const lastNameInput = document.getElementById('userLastName');
+  const signaturePreview = document.getElementById('signaturePreview');
+
+  // Function to update signature
+  function updateSignature() {
+    const firstName = firstNameInput.value.trim();
+    const lastName = lastNameInput.value.trim();
+    signaturePreview.textContent = firstName + (firstName && lastName ? ' ' : '') + lastName;
+  }
+
+  // Event listeners for live update
+  firstNameInput.addEventListener('input', updateSignature);
+  lastNameInput.addEventListener('input', updateSignature);
+
+  // Optional: initialize on page load
+  updateSignature();
+</script>
+
 
         <div class="step {% if step != 1 %}d-none{% endif %} mt-5">
         <div class="row">
@@ -84,13 +197,44 @@
 
           <div class="mb-5">
             <label class="form-label" for="emailVerificationCode">Verification Code <span style="color: red;"> *</span></label>
-            <input type="text" max="6" maxlength="6" name="emailVerificationCode" id="emailVerificationCode" class="form-control" placeholder="6 Digit Verification Code" required value="">
+<input type="text"
+       name="emailVerificationCode"
+       id="emailVerificationCode"
+       class="form-control"
+       placeholder="6 Digit Verification Code"
+       required
+       minlength="6"
+       maxlength="6"
+       pattern="[0-9]{6}"     
+       inputmode="numeric"    
+       title="Please enter exactly 6 digits">
+<small class="text-danger mt-1 d-block" id="otpHelp">Enter 6 digits (0/6)</small>
+
+<script>
+const otpInput = document.getElementById('emailVerificationCode');
+const otpHelp = document.getElementById('otpHelp');
+
+otpInput.addEventListener('input', function() {
+  // 1️⃣ Allow only numbers
+  this.value = this.value.replace(/[^0-9]/g, '');
+
+  // 2️⃣ Enforce max length
+  if(this.value.length > 6) this.value = this.value.slice(0,6);
+
+  // 3️⃣ Live feedback
+  if(this.value.length < 6){
+    otpHelp.textContent = `Enter 6 digits (${this.value.length}/6)`;
+  } else {
+    otpHelp.textContent = '';
+  }
+});
+</script>
           </div>
 <p>
   <button type="button" id="resendOtpBtn" class="btn btn-sm btn-outline-secondary me-2">
     Send my code again
   </button>
-  <a href="/signup" class="btn btn-sm btn-outline-secondary">Use a different email address</a>
+  <a href="{% url 'signup_basic' %}" class="btn btn-sm btn-outline-secondary">Use a different email address</a>
 </p>
 
 <!-- OTP message placeholder -->
@@ -108,6 +252,8 @@ $(document).ready(function() {
             $('#otpMessage').html('<div class="text-danger">Email not found in session.</div>');
             return;
         }
+
+        $("#emailVerificationCode").val('');
 
         $.ajax({
             url: "{% url 'resend_otp' %}",
@@ -157,7 +303,7 @@ $(document).ready(function() {
           <input type="text" name="userPhone" class="form-control" placeholder="Phone Number" required
           value="{{ request.POST.userPhone|default_if_none:'' }}">
         </div>
-        <p class="small">Message and data rates may apply. We will only use your phone number provided here for identity verification purposes. By choosing to Send Code, you agree to the <a href="/terms_of_service" class="d-inline-block">Terms of Service</a> and <a href="/privacy_policy" class="d-inline-block">Privacy Policy</a>.</p>
+        <p class="small">Message and data rates may apply. We will only use your phone number provided here for identity verification purposes. By choosing to Send Code, you agree to the <a href="javascript:void(0)" class="d-inline-block" data-bs-toggle="modal" data-bs-target="#serviceTermsModal">Terms of Service</a> and <a href="/javascript:void(0)" class="d-inline-block" data-bs-toggle="modal" data-bs-target="#privacyModal">Privacy Policy</a>.</p>
         <div class="text-center mt-3">
           <button type="button" class="btn btn-primary w-100" onclick="goToStep(3)">Send Code</button>
         </div>
@@ -176,7 +322,40 @@ $(document).ready(function() {
 
       <div class="mb-2">
         <label class="form-label" for="phoneVerificationCode">Verification Code <span style="color: red;"> *</span></label>
-        <input type="text" maxlength="6" minlength="6" name="phoneVerificationCode" id="phoneVerificationCode" class="form-control" placeholder="6 Digit Verification Code" required value="">
+<div class="mb-3">
+  <input type="text"
+         name="phoneVerificationCode"
+         id="phoneVerificationCode"
+         class="form-control"
+         placeholder="6 Digit Verification Code"
+         required
+         minlength="6"
+         maxlength="6"
+         pattern="[0-9]{6}"       
+         inputmode="numeric"
+         title="Please enter exactly 6 digits">
+  <small id="otpHelp1" class="text-danger mt-1 d-block">Enter 6 digits (0/6)</small>
+</div>
+
+<script>
+const otpInput1 = document.getElementById('phoneVerificationCode');
+const otpHelp1 = document.getElementById('otpHelp1');
+
+otpInput1.addEventListener('input', function() {
+  // 1️⃣ Only numbers
+  this.value = this.value.replace(/[^0-9]/g, '');
+
+  // 2️⃣ Enforce max length
+  if(this.value.length > 6) this.value = this.value.slice(0,6);
+
+  // 3️⃣ Live feedback
+  if(this.value.length < 6){
+    otpHelp1.textContent = `Enter 6 digits (${this.value.length}/6)`;
+  } else {
+    otpHelp1.textContent = ''; // hide message when complete
+  }
+});
+</script>
       </div>
 <p class="mb-5">
   <button type="button" id="resendMobileOtpBtn" class="btn btn-sm btn-outline-secondary me-2">
@@ -196,7 +375,7 @@ $(document).ready(function() {
             $('#mobileOtpMessage').html('<div class="text-danger">Phone number not found in session.</div>');
             return;
         }
-
+        $("#phoneVerificationCode").val('');
         $.ajax({
             url: "{% url 'send_mobile_otp' %}",
             method: "POST",
@@ -224,7 +403,7 @@ $(document).ready(function() {
 });
 </script>
 
-      <p class="small">By choosing to verify, you agree to the <a href="/terms_of_service" class="d-inline-block">Terms of Service</a> and <a href="/privacy_policy" class="d-inline-block">Privacy Policy</a>.</p>
+      <p class="small">By choosing to verify, you agree to the <a href="javascript:void(0)" class="d-inline-block" data-bs-toggle="modal" data-bs-target="#serviceTermsModal">Terms of Service</a> and <a href="/javascript:void(0)" class="d-inline-block" data-bs-toggle="modal" data-bs-target="#privacyModal">Privacy Policy</a>.</p>
       <div class="text-center mt-3">
         <button type="button" class="btn btn-primary w-100" onclick="goToStep(4)">Verify</button>
       </div>
@@ -239,24 +418,47 @@ $(document).ready(function() {
   <div class="row">
    <div class="col-sm-12 col-md-6">
     <h3 class="">Set your password</h3>
-      <p class="text-muted mb-4">Your account login will be <strong>dinesh.siwas@rmail.team</strong></p>
+      <p class="text-muted mb-4">Your account login will be <strong>{{email_prefill}}</strong></p>
 
     <div class="mb-5 position-relative">
       <label class="form-label" for="userPassword">Password <span style="color: red;">*</span></label>
     <div class="input-group mb-3" style="max-width: 400px;">
-  <input 
-    type="password" 
-    name="userPassword" 
-    id="userPassword" 
-    class="form-control" 
-    placeholder="Password" 
-    required
-    pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}" 
-    title="Password must be at least 8 characters, include uppercase, lowercase, and a number"
-  >
+  <input
+  type="password"
+  name="userPassword"
+  id="userPassword"
+  class="form-control"
+  placeholder="Password"
+  required
+  minlength="8"
+  pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[@#]).{8,}$"
+  title="Password must be at least 8 characters long and include at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character (@ or #)">
+
+
+
   <button type="button" class="btn btn-outline-secondary" id="togglePassword">
     <i class="fas fa-eye" id="eyeIcon"></i>
   </button>
+  <small id="passwordHelp" class="text-danger mt-1 d-block"></small>
+<script>
+const passwordInput = document.getElementById('userPassword');
+const passwordHelp = document.getElementById('passwordHelp');
+
+passwordInput.addEventListener('input', function() {
+  const value = this.value;
+  const minLength = 8;
+  const hasUpper = /[A-Z]/.test(value);
+  const hasLower = /[a-z]/.test(value);
+  const hasNumber = /[0-9]/.test(value);
+  const hasSymbol = /[@#]/.test(value);
+
+  if(value.length < minLength || !hasUpper || !hasLower || !hasNumber || !hasSymbol){
+    passwordHelp.textContent = 'Password must be at least 8 characters long and include 1 uppercase, 1 lowercase, 1 number, and 1 symbol (@ or #).';
+  } else {
+    passwordHelp.textContent = '';
+  }
+});
+</script>
 </div>
 
 
@@ -308,14 +510,19 @@ $(document).ready(function() {
   }
 
    const togglePassword = document.getElementById("togglePassword");
-    if(togglePassword){
-        togglePassword.addEventListener("click", function(){
-            const password = document.getElementById("userPassword");
-            password.type = password.type === "password" ? "text" : "password";
-             this.classList.toggle("fa-eye");
-            this.classList.toggle("fa-eye-slash");
-        });
-    }
+const password = document.getElementById("userPassword");
+const eyeIcon = document.getElementById("eyeIcon");
+
+if (togglePassword && password && eyeIcon) {
+  togglePassword.addEventListener("click", function() {
+    const isPasswordVisible = password.type === "text";
+    password.type = isPasswordVisible ? "password" : "text";
+
+    // Toggle the eye icon
+    eyeIcon.classList.toggle("fa-eye");
+    eyeIcon.classList.toggle("fa-eye-slash");
+  });
+}
 
 </script>
 
@@ -325,5 +532,351 @@ $(document).ready(function() {
     </div>
   </div>
 </div>
+
+
+<!-- privacyModal -->
+<div class="modal fade" id="privacyModal" tabindex="-1" aria-labelledby="privacyModalTitle" aria-modal="true" role="dialog">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h1 class="modal-title fs-5" id="exampleModalScrollableTitle">Privacy Policy</h1>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <h2 class="mb-4"><strong>EazeeSign Privacy Policy</strong></h2>    
+
+                        <h3><strong>What This Document Explains</strong></h3>
+                        <p>Welcome to EazeeSign. We believe protecting your private information is fundamental to earning your trust. This notice explains how EazeeSign, Inc. (“EazeeSign,” “we,” “us”) gathers, uses, and protects your personal information. This applies when you use our websites (like eazeesign.com), our mobile apps, or any of our services that link to this notice (our “Services”).</p>
+
+                        <p>When you use our Services, you are acknowledging our methods for handling your information as we've laid them out here.</p>
+
+                        <p>Sometimes, we handle your information because of a deal we have with another company, like your employer. If you think another organization asked us to manage your information (for example, they sent you a document to sign), you should contact them first. They are the ones in charge of your data in that situation. This notice doesn't cover other websites or apps you might visit, even if we link to them. It's a good idea to check their own privacy policies.</p>
+
+                        <p>Our main service helps you complete and prove the validity of digital transactions. This could be signing a rental agreement or putting a digital signature on a new-hire form. To make this work, we need to collect and record details that prove the transaction happened, like the names of people involved and the devices they used.</p>
+
+                        <p>We recommend reading this entire notice to be fully informed. You can also use the sections below to jump to the information you need.</p>
+
+                        <ol class="mb-4">
+                            <li class="pb-1">What Information We Collect</li>
+                            <li class="pb-1">How We Use Your Information</li>
+                            <li class="pb-1">Who We Share Information With</li>
+                            <li class="pb-1">How Long We Keep Your Information</li>
+                            <li class="pb-1">Your Choices</li>
+                            <li class="pb-1">Your Global Privacy Rights</li>
+                            <li class="pb-1">A Note on Children's Privacy</li>
+                            <li class="pb-1">Keeping Your Information Safe</li>
+                            <li class="pb-1">Changes to This Notice</li>
+                            <li class="pb-1">How to Contact Us</li>
+                        </ol>
+
+                        <h3><strong>What Information We Collect</strong></h3>
+                        <p class="mb-4">You get to decide what information you give us. Just know that some parts of our Services won't work without certain details. For instance, you can't sign a document without giving us your name and creating a signature.</p>
+
+                        <h4><strong>Information You Give Us</strong></h4>
+                        <p>You directly provide us with information about yourself when you do things like:</p>
+
+                        <ul>
+                            <li class="pb-1">Sign up for or log into your EazeeSign account.</li>
+                            <li class="pb-1">Start, sign, or look at a document.</li>
+                            <li class="pb-1">Fill out your user profile.</li>
+                            <li class="pb-1">Talk with our customer support team.</li>
+                            <li class="pb-1">Leave a comment on our blog or in a forum.</li>
+                            <li class="pb-1">Take part in a survey or event.</li>
+                        </ul>
+
+                        <p>You might also give us information about other people. This happens when you:</p>
+
+                        <ul>
+                            <li class="pb-1">Send a document to someone else to sign.</li>
+                            <li class="pb-1">Add a team member to your account.</li>
+                            <li class="pb-1">Refer a friend to EazeeSign.</li>
+                        </ul>
+
+                        <p>Here are examples of the details you might provide:</p>
+
+                        <ul class="mb-4">
+                            <li class="pb-1"><strong>Your Name and Contact Details:</strong> This includes your name, email, mailing address, phone number, or your electronic signature.</li>
+                            <li class="pb-1"><strong>Billing Information:</strong> Your payment details, like a credit card number, and a record of what you've purchased.</li>
+                            <li class="pb-1"><strong>Your Account Details:</strong> Your login email and password, plus any profile info you add like a photo or job title.</li>
+                            <li class="pb-1"><strong>Your Messages:</strong> Questions or feedback you send us through online forms, emails, or support chats. We may keep a record of these conversations.</li>
+                        </ul>
+
+                        <h4><strong>Information We Collect Automatically</strong></h4>
+                        <p>Your computer and devices tell us some things automatically when you use our Services. We collect this information even if you're just visiting our website without logging in.</p>
+
+                        <p>This includes:</p>
+
+                        <ul>
+                            <li class="pb-1"><strong>Device Details:</strong> Your IP address, device model, operating system, and the type of web browser you're using.</li>
+                            <li class="pb-1"><strong>Usage Details:</strong> Information about your activity, like the web pages you came from, what you clicked on, which pages you looked at, and how long you spent on them.</li>
+                            <li class="pb-1"><strong>Transaction Details:</strong> We keep a secure audit log for every transaction. This log shows who did what and when, such as reviewing or signing a document. It also includes the IP addresses of the people involved to help confirm the document’s integrity.</li>
+                        </ul>
+
+                        <p class="mb-4">We capture some of this automatic information using cookies and similar tools.</p>
+
+                        <h3><strong>Information from Others</strong></h3>
+
+                        <p>We may get information about you from other places.</p>
+
+                        <ul>
+                            <li class="pb-1"><strong>Other EazeeSign Users:</strong> A user might give us your name and email to ask for your signature on a document.</li>
+                            <li class="pb-1"><strong>Third-Party Services:</strong> If you connect your EazeeSign account to another service, that service may send us information about you.</li>
+                            <li class="pb-1"><strong>Our Partners:</strong> We might get information from marketing partners or affiliated companies when they are legally allowed to share it.</li>
+                        </ul>
+
+                        <p>We may put together the information we get from you and from these other sources.</p>
+
+                        <h3 class="mt-4"><strong>2. How We Use Your Information</strong></h3>
+                        <p>We use your information to run, support, and improve our Services. The table below gives you a clearer picture of exactly why we use your data and our legal reason for doing so.</p>
+
+                        <table class="table table-striped">
+                          <thead>
+                            <tr>
+                              <th scope="col">Our Purpose</th>
+                              <th scope="col">Examples of Information We Use</th>
+                              <th scope="col">Our Reason (The Legal Part)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <th scope="row">To Provide and Bill for Our Services</th>
+                              <td>Your Name and Contact Details, Billing Information, Transaction Details</td>
+                              <td>To fulfill our contract with you.</td>
+                            </tr>
+                            <tr>
+                              <th scope="row">To Manage Your Account</th>
+                              <td>Your Account Details, Your Messages</td>
+                              <td>To manage your account as part of our contract. We also have a legitimate interest in sending you service updates.</td>
+                            </tr>
+                            <tr>
+                              <th scope="row">To Create a Secure Audit Trail</th>
+                              <td>Your Name and Contact Details, Transaction Details, Device Details</td>
+                              <td>This is a core part of our contract. We also have a legitimate interest in proving transactions are valid.</td>
+                            </tr>
+
+                            <tr>
+                              <th scope="row">To Keep Our Service Safe and Secure</th>
+                              <td>Account Details, Device Details, Usage Details</td>
+                              <td>We have a legitimate interest in protecting our platform and our users from security threats and fraud.</td>
+                            </tr>
+
+                            <tr>
+                              <th scope="row">To Help You and Fix Problems</th>
+                              <td>Your Account Details, Your Messages, Device Details, Usage Details</td>
+                              <td>We have a legitimate interest in offering good customer support and keeping our service running smoothly.</td>
+                            </tr>
+
+                            <tr>
+                              <th scope="row">To Improve Our Services</th>
+                              <td>Usage Details, Transaction Details, and anonymized feedback</td>
+                              <td>We have a legitimate interest in making our products better and creating new ones. We ask for your consent when the law requires it.</td>
+                            </tr>
+
+                            <tr>
+                              <th scope="row">To Train Our AI Models</th>
+                              <td>Anonymized Usage and Transaction Data. We will only use your specific documents or personal data with your direct consent.</td>
+                              <td>We use anonymized data based on our legitimate interest to improve AI features. We only use personal data with your consent.</td>
+                            </tr>
+
+                            <tr>
+                              <th scope="row">To Market Our Services</th>
+                              <td>Your Name and Contact Details, Usage Details</td>
+                              <td>We have a legitimate interest in promoting our business. We get your consent for certain marketing activities if the law says we must.</td>
+                            </tr>
+
+                            <tr>
+                              <th scope="row">To Follow the Law</th>
+                              <td>Any relevant information needed.</td>
+                              <td>To meet our legal obligations under laws, regulations, or court orders.</td>
+                            </tr>
+                          </tbody>
+                        </table>
+
+                        <h3 class="mt-4"><strong>3. Who We Share Information With</strong></h3>
+                        <p>We share your information only with specific parties for clear reasons.</p>
+
+                        <ul>
+                            <li class="pb-1"><strong>Service Providers:</strong> We use other companies to help us run our business. This includes cloud hosting providers, payment processors, and customer support tools. They are only allowed to use your information to perform the task we hired them for.</li>
+                            <li class="pb-1"><strong>Affiliates:</strong> We may share information with companies that are part of the EazeeSign corporate family.</li>
+                            <li class="pb-1"><strong>Advertising Partners:</strong> On our marketing websites, we may allow ad partners to use cookies to show you relevant ads on other sites. This does not happen inside our core e-signature product. We never share the content of your documents with ad partners.</li>
+                            <li class="pb-1"><strong>Government or Legal Authorities:</strong> We will share information if the law requires it, such as for a court order, or to protect anyone’s physical safety.</li>
+                            <li class="pb-1"><strong>Business Transfers:</strong> If our company is sold or merges with another, your information may be part of that transfer. We would notify you if this happens.</li>
+                            <li class="pb-1"><strong>With Your Permission:</strong> We may share your information in other ways if you ask us to or give us your direct permission.</li>
+                        </ul>
+
+                        <h4 class="mt-4"><strong>Your information can also be seen by:</strong></h4>
+
+                        <p><strong>Other EazeeSign Users:</strong> When you send a document for signature, the recipients will see its contents and your name.</p>
+                        
+                        <p><strong>Your Organization:</strong> If you sign up using a work email address (like test@eazeesign.com), your organization might be able to see and manage your account if they are an EazeeSign customer.</p>
+
+                        <h3 class="mt-4"><strong>4. How Long We Keep Your Information</strong></h3>
+                        <p>We keep your information only as long as we need it for the purpose it was collected. The specific time depends on why we have it and any legal rules we must follow. For instance, we hold onto the details of a signed document for many years to maintain its legal validity. When we no longer need information, we securely delete or anonymize it.</p>
+
+                        <h3 class="mt-4"><strong>5. Your Choices</strong></h3>
+                        <p>You always have choices about how your information is used.</p>
+
+                        <ul>
+                            <li class="pb-1"><strong>Marketing Messages:</strong> You can stop receiving marketing emails by clicking the “unsubscribe” link at the bottom of any message. You will still get emails about your account, like signature requests or billing notices.</li>
+                            <li class="pb-1"><strong>Cookies: </strong> You can control cookies through your browser settings or our website's cookie preference tool.</li>
+                            <li class="pb-1"><strong>Location:</strong> You can turn off location sharing in your device or browser settings.</li>
+                        </ul>
+
+                        <p>Closing Your Account: You can close your account through your account settings page. We may need to keep some information for legal or record-keeping purposes.</p>
+
+                        <h3 class="mt-4"><strong>6. Your Global Privacy Rights</strong></h3>
+                        <p>No matter where you live, we believe you should have control over your personal information. Depending on your location, you may have specific legal rights. We are committed to honoring them. These often include:</p>
+
+                        <ul>
+                            <li class="pb-1"><strong>The Right to Access:</strong> You can ask for a copy of the personal information we hold about you.</li>
+                            <li class="pb-1"><strong>The Right to Correct:</strong> If you believe any information we have about you is wrong, you can ask us to fix it.</li>
+                            <li class="pb-1"><strong>The Right to Delete:</strong> You can request that we erase your personal information. In some cases, we may need to keep certain information for legal or business reasons, and we will explain why if that happens.</li>
+
+                            <li class="pb-1"><strong>The Right to Object:</strong> You have the right to object to us using your information, especially for marketing purposes.</li>
+                            <li class="pb-1"><strong>The Right to Restrict Use:</strong> You can ask us to temporarily stop using your information in certain situations.</li>
+                            <li class="pb-1"><strong>The Right to Data Portability:</strong> You can ask for your information in a format that you can easily take to another service.</li>
+                        </ul>
+
+                        <p>To use any of these rights, email us at <a href="mailto:privacy@eazeesign.com">privacy@eazeesign.com</a>. We will need to check your identity to protect your information before we process your request.</p>
+
+                        <h4 class="mt-4"><strong>International Data Transfers</strong></h4>
+
+                        <p>Because we are a global company, your information might be stored or processed in countries outside of your own. We use approved legal methods, like Standard Contractual Clauses, to make sure your data is protected no matter where it goes.</p>
+
+                        <h3 class="mt-4"><strong>7. A Note on Children's Privacy</strong></h3>
+                        <p>Our service is for adults. It is not designed for or marketed to anyone under the age of 18. We do not knowingly collect information from children. If you think we have, please contact us so we can remove it.</p>
+
+                        <h3 class="mt-4"><strong>8. Keeping Your Information Safe</strong></h3>
+                        <p>We use a mix of strong security tools and company rules to protect your information. This includes things like encryption for your data and strict access controls for our employees. Our team is trained on their responsibility to protect your data and is bound by confidentiality.</p>
+
+                        <h3 class="mt-4"><strong>9. Changes to This Notice</strong></h3>
+                        <p>We may update this privacy notice to reflect new practices or changes in the law. When we make a change, we will update the date at the top of this page. For major changes, we will let you know more directly, perhaps by email.</p>
+
+                        <h3 class="mt-4"><strong>10. How to Contact Us</strong></h3>
+                        <p>If you have any questions or concerns about your privacy, please get in touch with our Privacy Team.</p>
+
+                        <p><strong class="d-block">Email:</strong>
+                            <a href="mailto:contact@eazeesign.com">contact@eazeesign.com</a></p>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- privacyModal Close -->
+
+<!-- serviceTermsModal -->
+<div class="modal fade" id="serviceTermsModal" tabindex="-1" aria-labelledby="serviceTermsModalTitle" aria-modal="true" role="dialog">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h1 class="modal-title fs-5" id="exampleModalScrollableTitle">Terms of Services</h1>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <section>
+  <h2><strong>EazeeSign Terms and Conditions</strong></h2>
+  <p><strong>Effective Date:</strong> October 28, 2024</p>
+  <p>
+    By using the EazeeSign service ("Service" or "EazeeSign"), you agree to the following terms and conditions ("Terms"). 
+    Please read them carefully. If you do not agree with these Terms, do not use the Service.
+  </p>
+
+  <h3 class="mt-4"><strong>1. Acceptance of Terms</strong></h3>
+  <p>
+    By accessing or using EazeeSign, you agree to comply with these Terms. If you are using the Service on behalf of a company 
+    or organization, you confirm that you have the authority to bind that organization to these Terms.
+  </p>
+
+  <h3 class="mt-4"><strong>2. Services Provided</strong></h3>
+  <p>
+    EazeeSign offers electronic signature services and related features to help you manage and sign documents online securely 
+    and efficiently. You are responsible for using the Service in accordance with applicable laws and regulations.
+  </p>
+
+  <h3 class="mt-4"><strong>3. Account Registration and Security</strong></h3>
+  <p>
+    To access the Service, you may need to create an account. You agree to provide accurate and complete information during 
+    registration and to update it if necessary. You are responsible for maintaining the confidentiality of your account 
+    credentials and for all activities under your account.
+  </p>
+
+  <h3 class="mt-4"><strong>4. User Obligations</strong></h3>
+  <ul>
+    <li>Use the Service only for lawful purposes.</li>
+    <li>Ensure that all documents signed using the Service are lawful and compliant with relevant regulations.</li>
+    <li>Not upload or transmit any harmful, defamatory, or unlawful content through the Service.</li>
+    <li>Comply with all applicable local, state, and international laws related to the use of electronic signatures.</li>
+  </ul>
+
+  <h3 class="mt-4"><strong>5. Intellectual Property</strong></h3>
+  <p>
+    EazeeSign owns all rights, title, and interest in and to the Service, including all associated intellectual property rights. 
+    You are granted a limited, non-exclusive, and non-transferable license to use the Service for its intended purpose.
+  </p>
+
+  <h3 class="mt-4"><strong>6. Privacy and Data Protection</strong></h3>
+  <p>
+    We value your privacy. The information you provide to EazeeSign is governed by our Privacy Policy, which explains how we 
+    collect, use, and protect your personal data. By using the Service, you consent to the collection and processing of your 
+    data as outlined in the Privacy Policy.
+  </p>
+
+  <h3 class="mt-4"><strong>7. Payment and Billing</strong></h3>
+  <p>
+    Access to certain features of the Service may require payment. If you sign up for a paid plan, you agree to provide accurate 
+    billing information and authorize us to charge you for the use of the Service. Payment terms are outlined in our 
+    <a href="#">Pricing Page</a>.
+  </p>
+
+  <h3 class="mt-4"><strong>8. Restrictions</strong></h3>
+  <ul>
+    <li>Reverse-engineer, decompile, or attempt to extract the source code of the Service.</li>
+    <li>Use the Service to create, send, or distribute any malware or unauthorized content.</li>
+    <li>Interfere with the operation of the Service or other users' ability to access it.</li>
+  </ul>
+
+  <h3 class="mt-4"><strong>9. Termination</strong></h3>
+  <p>
+    We may suspend or terminate your access to the Service if you violate these Terms. You may terminate your account at any 
+    time by contacting us at <a href="mailto:contact@eazeesign.com">Contact Information</a>. Upon termination, your right to use 
+    the Service will immediately end, but any obligations that existed before termination will remain in effect.
+  </p>
+
+  <h3 class="mt-4"><strong>10. Limitation of Liability</strong></h3>
+  <p>
+    To the maximum extent permitted by law, EazeeSign is not liable for any indirect, incidental, special, or consequential 
+    damages, including loss of profits or data, arising from your use of the Service. Our total liability for any claim related 
+    to the Service is limited to the amount you have paid for the Service during the past 12 months.
+  </p>
+
+  <h3 class="mt-4"><strong>11. Indemnification</strong></h3>
+  <p>
+    You agree to indemnify, defend, and hold harmless EazeeSign, its officers, directors, and employees from any claims, losses, 
+    damages, or expenses (including legal fees) arising out of your use of the Service, violation of these Terms, or violation 
+    of any third-party rights.
+  </p>
+
+  <h3 class="mt-4"><strong>12. Changes to Terms</strong></h3>
+  <p>
+    We may update these Terms from time to time. When we make significant changes, we will notify you by email or through a 
+    notice within the Service. Your continued use of the Service after any changes to the Terms constitutes acceptance of those 
+    changes.
+  </p>
+
+  <h3 class="mt-4"><strong>13. Governing Law and Dispute Resolution</strong></h3>
+  <p>
+    These Terms are governed by the laws of various countries. Any disputes arising from these Terms will be resolved, unless 
+    you opt out of arbitration in accordance with the applicable law.
+  </p>
+
+  <h3 class="mt-4"><strong>14. Contact Us</strong></h3>
+  <p>
+    If you have any questions about these Terms or need assistance with your account, please contact us at: 
+    <a href="mailto:contact@eazeesign.com">contact@eazeesign.com</a>
+  </p>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- serviceTermsModal End -->
 
 {% endblock %}

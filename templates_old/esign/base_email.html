@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en" dir="ltr" data-startbar="dark" data-bs-theme="light">
+<head>
+  
+  {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta content="" name="description" />
+    <meta content="" name="author" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>{% block title %}Eazee Sign{% endblock %}</title>
+    <!-- App favicon -->
+    <link rel="shortcut icon" href="{% static 'assets/images/favicon.png' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Oooh+Baby&display=swap" rel="stylesheet">
+    <!-- App css -->
+    <link href="{% static 'assets/css/bootstrap.min.css' %}" rel="stylesheet" type="text/css" />
+    <link href="{% static 'assets/css/icons.min.css' %}" rel="stylesheet" type="text/css" />
+    <link href="{% static 'assets/css/app.min.css' %}" rel="stylesheet" type="text/css" />
+    <link href="{% static 'assets/css/custom-styles.css' %}" rel="stylesheet" type="text/css" />
+<!doctype html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="x-apple-disable-message-reformatting">
+  <title>OTP Verification</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:AllowPNG/>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <style type="text/css">
+    table { border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    td { border-collapse: collapse; }
+  </style>
+  <![endif]-->
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      margin: 0 !important;
+      padding: 0 !important;
+      background-color: #f3f4f6;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    table {
+      border-spacing: 0 !important;
+      border-collapse: collapse !important;
+      mso-table-lspace: 0pt !important;
+      mso-table-rspace: 0pt !important;
+    }
+    td {
+      padding: 0;
+      border-collapse: collapse !important;
+    }
+    img {
+      border: 0;
+      height: auto;
+      line-height: 100%;
+      outline: none;
+      text-decoration: none;
+      -ms-interpolation-mode: bicubic;
+    }
+    a {
+      text-decoration: none;
+    }
+    .button-link {
+      color: #ffffff !important;
+      text-decoration: none !important;
+    }
+    /* Remove borders in Outlook */
+    table, td, tr {
+      border: 0 !important;
+      border: none !important;
+    }
+    @media only screen and (max-width: 600px) {
+      .container {
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+      .mobile-padding {
+        padding-left: 16px !important;
+        padding-right: 16px !important;
+      }
+      .mobile-center {
+        text-align: center !important;
+      }
+      .otp-text {
+        font-size: 28px !important;
+        letter-spacing: 4px !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page-wrapper">
+  <!-- Page Content-->
+  <div class="page-content ms-0 mt-0 pb-0" >
+
+  <!-- Navbar (Fixed) -->
+
+  <!-- Content -->
+  <div class="mt-0">
+    {% block content %}{% endblock %}
+  </div>
+          
+        </div>
+        <!-- end page content -->
+    </div>
+    <!-- end page-wrapper -->
+
+  <!-- Javascript  -->
+    <!-- vendor js -->
+    
+    <script src="{% static 'assets/libs/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+    <script src="{% static 'assets/libs/simplebar/simplebar.min.js' %}"></script>
+    <script src="{% static 'assets/js/app.js' %}"></script>
+
+</body>
+<!--end body-->
+</html>

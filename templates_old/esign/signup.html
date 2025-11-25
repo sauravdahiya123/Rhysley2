@@ -1,0 +1,68 @@
+{% extends "esign/base_login.html" %}
+{% block content %}
+
+<div class="d-flex justify-content-center align-items-center">
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-sm-12 col-md-8 offset-md-2 col-lg-6 offset-lg-3">
+        <div class="login-wrapper">
+          <div class="row">
+            <div class="col-sm-12 text-center mb-3 mt-5">
+              <h3 class="">Try Eazee Sign for Free</h3>
+              <p class="text-muted">No Credit Card Required.</p>
+            </div>
+          </div>
+
+          
+  {% if messages %}
+            {% for message in messages %}
+              {% if message.tags == 'success' %}
+                <small  id="msgg" class="text-success fw-semibold d-block text-center mb-2">{{ message }}</small>
+              {% elif message.tags == 'error' and 'Invalid OTP' not in message %}
+                <small  id="msgg" class="text-danger fw-semibold d-block text-center mb-2">{{ message }}</small>
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+
+        <form method="post" action="{% url 'signup_basic' %}" id="signupForm">
+            {% csrf_token %}
+              <div class="row">               
+                <div class="col-sm-8 offset-sm-2">
+                  <div class="mb-4">
+                    <label class="form-label" for="userEmail">Email<span style="color: red;"> *</span></label>
+                    <input type="email" name="userEmail" class="form-control" placeholder="Email" required
+                      value="{{ request.POST.userEmail|default_if_none:'' }}">
+
+                      <!-- <div id="userEmailHelp" class="form-text small text-muted">
+                      <i class="fas fa-info-circle me-1"></i> e.g.: john.dow@example.com
+                    </div> -->
+                  </div>
+                </div>
+                                
+                </div>
+                <div class="row">
+                <div class="col-sm-8 offset-sm-2">
+                  <div class="mb-3 form-check">
+                    <input required type="checkbox" class="form-check-input" id="userConsentCheckBox">
+                    <label class="form-check-label mb-3" for="userConsentCheckBox">I agree to receive marketing communications from EazeeSign and acknowledge that I can opt out at any time by submitting contact us form.</label>
+
+                    <small>By clicking "Get Started," you agree to EazeeSign's <a href="/privacy_policy" class="d-inline-block">Privacy Policy</a> and <a href="/terms_of_service" class="d-inline-block">Terms of Service</a>.</small>
+                  </div>
+                </div>
+              </div>
+            <div class="text-center">
+              <button type="submit" class="btn btn-primary px-5">Get Started</button>
+              <!-- <p class="mt-3 text-center">
+                Already have an account? <a href="{% url 'user_login' %}">Login</a>
+              </p> -->
+            </div>
+          </form>
+
+         
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

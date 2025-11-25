@@ -1,0 +1,130 @@
+{% extends 'esign/base.html' %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h3>Documents</h3>
+  <a class="btn btn-bw" href="{% url 'upload_document' %}">Upload Document</a>
+</div>
+
+{% if documents %}
+<table class="table table-bordered table-hover align-middle">
+  <thead class="table-light">
+    <tr>
+      <th>#</th>
+      <th>Title</th>
+      <th>Total Signers</th>
+      <th>Signed</th>
+      <th>Pending</th>
+      <th>Status</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for d in documents %}
+    {% with flows=d.sign_flow.all %}
+    <tr>
+      <td>{{ forloop.counter }}</td>
+      <td>{{ d.title }}</td>
+      <td>{{ flows|length }}</td>
+      
+      {# Signed Users with merged_file links #}
+      <td>
+        {% for f in flows %}
+          {% if f.is_signed %}
+            {% if f.merged_file %}
+              <a href="{{ f.merged_file.url }}" target="_blank">{{ f.recipient_email }}</a>{% if not forloop.last %}, {% endif %}
+            {% else %}
+              {{ f.recipient_email }}{% if not forloop.last %}, {% endif %}
+            {% endif %}
+          {% endif %}
+        {% empty %}
+          None
+        {% endfor %}
+      </td>
+
+      {# Pending Users #}
+      <td>
+        {% for f in flows %}
+          {% if not f.is_signed %}
+            {{ f.recipient_email }}{% if not forloop.last %}, {% endif %}
+          {% endif %}
+        {% empty %}
+          None
+        {% endfor %}
+      </td>
+
+      {# Status Column #}
+      <td>
+        {% if d.all_signed %}
+            <span class="badge bg-success">Complete</span>
+        {% else %}
+            <span class="badge bg-warning text-dark">Pending</span>
+        {% endif %}
+      </td>
+
+      {# Actions Column Updated #}
+      <td>
+        <!-- <a href="{% url 'document_detail' d.pk %}" class="btn btn-sm btn-outline-dark me-1">Open</a> -->
+
+        {# Download Dropdown #}
+      <div class="dropdown d-inline">
+  <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" id="downloadMenu{{ d.pk }}" data-bs-toggle="dropdown" aria-expanded="false">
+    Download
+  </button>
+  <ul class="dropdown-menu p-3" aria-labelledby="downloadMenu{{ d.pk }}" style="min-width: 250px;">
+    <li>
+      <form method="post" action="{% url 'download_document_files' d.pk %}">
+        {% csrf_token %}
+        
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" value="all_signed" name="download_options" id="allSigned{{ d.pk }}">
+          <label class="form-check-label" for="allSigned{{ d.pk }}">
+            Download All Signed Files
+          </label>
+        </div>
+
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" value="original" name="download_options" id="original{{ d.pk }}">
+          <label class="form-check-label" for="original{{ d.pk }}">
+            Download Original Document
+          </label>
+        </div>
+
+        <hr class="my-2">
+        <p class="mb-1"><strong>Or select recipients:</strong></p>
+        {% for f in flows %}
+        {% if f.is_signed %}
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" value="{{ f.pk }}" name="recipient_ids" id="recipient{{ f.pk }}">
+          <label class="form-check-label" for="recipient{{ f.pk }}">
+            {{ f.recipient_email }}
+          </label>
+        </div>
+        {% endif %}
+        {% endfor %}
+        
+        <div class="mt-2">
+          <button type="submit" class="btn btn-sm btn-primary">Download Selected</button>
+        </div>
+      </form>
+    </li>
+  </ul>
+</div>
+
+
+        <form method="post" action="{% url 'delete_document' d.pk %}" class="d-inline" 
+              onsubmit="return confirm('Are you sure you want to delete this document?');">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+        </form>
+      </td>
+    </tr>
+    {% endwith %}
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>No documents yet.</p>
+{% endif %}
+
+{% endblock %}
