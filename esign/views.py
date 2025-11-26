@@ -61,13 +61,42 @@ def signup_steps(request):
 @csrf_exempt  # Only if testing with external POST tools like Postman
 def recipient_details(request):
     if request.method == "POST":
-        # Convert POST QueryDict to regular dict
-        data = {key: request.POST.getlist(key) if len(request.POST.getlist(key)) > 1 else request.POST[key]
-                for key in request.POST.keys()}
-        return JsonResponse({"method": "POST", "data": data})
-    else:
-        # GET request: render template as usual
-        return render(request, 'esign/recipient_details.html')
+        data = {}
+
+        # Check if sign order is ON or OFF
+        sign_order_enabled = request.POST.get("signOrderOption") == "on"
+
+        recipients = []
+        index = 1
+
+        while True:
+            name_key = f"name_{index}"
+            email_key = f"email_{index}"
+            action_key = f"signUserActions_{index}"
+
+            if name_key not in request.POST:
+                break
+
+            recipients.append({
+                "order": index,                         # <---- ORDER NUMBER
+                "name": request.POST.get(name_key, ""),
+                "email": request.POST.get(email_key, ""),
+                "action": request.POST.get(action_key, "")
+            })
+            index += 1
+
+        data["method"] = "POST"
+        data["recipients"] = recipients
+        data["signOrderEnabled"] = sign_order_enabled   # <--- tell frontend whether order matters
+
+        # Optional fields — avoid null
+        data["subject"] = request.POST.get("subject", "")
+        data["message"] = request.POST.get("message", "")
+        data["reminder_frequency"] = request.POST.get("reminder_frequency", "")
+
+        return JsonResponse(data)
+
+    return render(request, 'esign/recipient_details.html')
     
     
 import random, datetime
