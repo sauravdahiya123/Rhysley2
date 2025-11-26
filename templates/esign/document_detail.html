@@ -261,7 +261,20 @@ form.addEventListener('submit', function(e){
 <!-- Formatting Sidebar -->
 <div class="format-sidebar bg-light p-3 shadow-lg" id="formatSidebar">
 
-  <div class="accordion accordion-flush mb-2" id="accordionFlushRecipients">
+  <div id="boxPairingContainer" class="mb-3">
+  <h6 class="fw-bold mb-2">Assign Sign Box</h6>
+
+  <div id="emailRadioList" class="mb-2">
+    <!-- Radios for dynamic emails will be injected here -->
+  </div>
+
+  <div class="form-check">
+    <input class="form-check-input" type="checkbox" id="boxRequiredCheckbox">
+    <label class="form-check-label" for="boxRequiredCheckbox">Required</label>
+  </div>
+</div>
+
+  <!-- <div class="accordion accordion-flush mb-2" id="accordionFlushRecipients">
   <div class="accordion-item">
     <h2 class="accordion-header" id="flush-headingOne">
       <button class="accordion-button rounded p-2 py-1 bg-transparent collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseOne" aria-expanded="false" aria-controls="flush-collapseOne">
@@ -311,7 +324,7 @@ form.addEventListener('submit', function(e){
       <label class="form-check-label" for="flexCheckRequired">
         Required
       </label>
-    </div>
+    </div> -->
 
   <h6 id="formatTitle">Signature Formatting</h6>  
   <label class="form-label mt-2">Font Family</label>
@@ -341,91 +354,19 @@ form.addEventListener('submit', function(e){
 </div>
 
 
-<!-- Document Info Card -->
-<!-- <div class="card card-custom">
-  <div class="card-header py-3">
-    <h3 class="mb-0">{{ document.title }}</h3>
-  </div>
-  <div class="card-body">
-    <p><strong>Owner:</strong> {{ document.owner }}</p>
-    <p><strong>Status:</strong> 
-      <span class="badge {% if document.status == 'Approved' %}bg-success{% else %}bg-warning text-dark{% endif %}">
-        {{ document.status }}
-      </span>
-    </p>
-    <div class="mt-3">
-      <a href="{{ document.file.url }}" target="_blank" class="btn btn-sm btn-outline-primary me-2">
-        <i class="bi bi-download"></i> Download Original
-      </a>
-      {% if document.merged_file %}
-      <a href="{{ document.merged_file.url }}" target="_blank" class="btn btn-sm btn-outline-success">
-        <i class="bi bi-download"></i> Download Merged
-      </a>
-      {% endif %}
-    </div>
-  </div>
-</div> -->
 
-<!-- Send Signing Link Form -->
-<!-- <div class="card card-custom">
-  <div class="card-header py-2 bg-light d-flex justify-content-between align-items-center">
-    <h5 class="mb-0">Send Signing Link</h5>
-    
-    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#bulkMailModal">
-      <i class="bi bi-people"></i> DocumentSignFlow
-    </button>
-  </div>
-
-  <div class="card-body">
-
-  </div>
-
-  
-  <div class="card card-custom mb-4">
-    <div class="card-header py-2 bg-light d-flex justify-content-between align-items-center">
-      <h5 class="mb-0">Bulk Send Signing Link</h5>
-    </div>
-
-    <div class="card-body">
-
-    </div>
-  </div>
-
-</div> -->
-
-<!-- Bulk Mail Modal -->
-<!-- <div class="modal fade" id="bulkMailModal" tabindex="-1">
-  <div class="modal-dialog modal-lg modal-dialog-scrollable">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">DocumentSignFlow Mail - Add Recipients</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <div id="bulk-list">
-          <div class="bulk-item d-flex mb-2">
-            <input type="text" name="bulk_name[]" class="form-control me-2" placeholder="Full Name" required>
-            <input type="email" name="bulk_email[]" class="form-control me-2" placeholder="user@example.com" required>
-            <input type="number" name="bulk_position[]" class="form-control me-2" placeholder="Position/Order" min="1" value="1" required>
-            <button type="button" class="btn btn-danger btn-sm remove-bulk">&times;</button>
-          </div>
-        </div>
-        <button type="submit" class="btn btn-outline-success btn-sm" id="add-bulk">
-          <i class="bi bi-plus"></i> Add More
-        </button>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Save & Close</button>
-      </div>
-    </div>
-  </div>
-</div> -->
 
 <!-- JS -->
+
 
 <script>
   const sidebar = document.getElementById('formatSidebar');
   let activeBox = null;
+
+  // ───────── NEW GLOBALS ─────────
+  let signatureCounter = 0;   // unique id counter for each dropped box
+  let selectedBox = null;     // currently selected/active signature box for formatting + pairing
+  // ───────────────────────────────
 
   document.addEventListener('click', function (e) {
   const clickedBox = e.target.closest('.sig-box');     // clicked on placed element?
@@ -435,18 +376,28 @@ form.addEventListener('submit', function(e){
     // ✅ Clicked inside a draggable box
     sidebar.classList.add('active');
     activeBox = clickedBox;
+    selectedBox = clickedBox; // keep consistent name used elsewhere
 
     // Optional dynamic title
     const type = clickedBox.dataset.type || 'Element';
     document.getElementById('formatTitle').textContent =
-  `${type.charAt(0).toUpperCase() + type.slice(1)} Formatting`;
+      `${type.charAt(0).toUpperCase() + type.slice(1)} Formatting`;
 
-} else if (!clickedSidebar) {
+    // Open pairing UI for this clicked box (mobile + desktop)
+    openPairingForBox(clickedBox);
+
+  } else if (!clickedSidebar) {
     // ❌ Clicked outside both box and sidebar
   sidebar.classList.remove('active');
   activeBox = null;
 }
 });
+
+// --- NEW: Force-open sidebar (safe wrapper) ---
+function openSidebar() {
+    const sidebar = document.getElementById('formatSidebar');
+    sidebar.classList.add('active');
+}
 
 </script>
 
@@ -619,31 +570,37 @@ pdfjsLib.getDocument(url).promise.then(pdf => {
 templates.forEach(template => {
   template.addEventListener('mousedown', e => {
     e.preventDefault();
+
+    // clone and assign unique id
+    signatureCounter++;
     draggingBox = template.cloneNode(true);
     draggingBox.classList.add('sig-box', 'dragging');
     draggingBox.dataset.type = template.dataset.type;
+
+    // Unique id and metadata used for pairing & serialize
+    const newId = `sig-box-${signatureCounter}`;
+    draggingBox.id = newId;
+    draggingBox.dataset.boxId = newId;
+    draggingBox.dataset.assignedEmail = ""; // will store assigned email
+    draggingBox.dataset.required = "false"; // will store required flag
+
     pdfContainer.appendChild(draggingBox);
+
+    // increment the "box dragged" counters you already used
     const boxDraggedInput = document.getElementById('box-dragged');
-        if (boxDraggedInput) {
-            let currentValue = parseInt(boxDraggedInput.value) || 0;
+    if (boxDraggedInput) {
+        let currentValue = parseInt(boxDraggedInput.value) || 0;
+        boxDraggedInput.value = currentValue + 1;
+    }
 
-            // Increment
-            boxDraggedInput.value = currentValue + 1;
-        }
-                  
-
-      const boxDraggedInputbulk = document.getElementById('box-dragged-order');
-      if (boxDraggedInputbulk) {
-          // Current value as number, default 0
-          let currentValue = parseInt(boxDraggedInputbulk.value) || 0;
-
-          // Increment by 1
-          boxDraggedInputbulk.value = currentValue + 1;
-      }
-
-
+    const boxDraggedInputbulk = document.getElementById('box-dragged-order');
+    if (boxDraggedInputbulk) {
+        let currentValue = parseInt(boxDraggedInputbulk.value) || 0;
+        boxDraggedInputbulk.value = currentValue + 1;
+    }
   });
 });
+
 
 
 function showFormatSidebar(box) {
@@ -725,16 +682,25 @@ if(foundPage){
 document.addEventListener('mouseup', e => {
   if(!draggingBox) return;
 
-  if (draggingBox) {
+    if (draggingBox) {
     selectedBox = draggingBox;
+
+    // NEW — force sidebar open immediately
+    openSidebar();
+
+    // existing format UI
     showFormatSidebar(selectedBox);
-        // draggingBox = null;
-  }
+
+    // existing pairing UI
+    openPairingForBox(selectedBox);
+}
+
 
   draggingBox.classList.remove('dragging');
   if(currentPage) makeDraggable(draggingBox, currentPage);
   draggingBox = null;
   currentPage = null;
+
 });
 
 // Drag, Resize, Rotate
@@ -771,20 +737,22 @@ function makeDraggable(box, pageDiv){
   box.appendChild(deleteBtn);
 
   // Delete box when clicked
+  // Delete box when clicked
   deleteBtn.addEventListener('click', (e) => {
     e.stopPropagation();
+
+    // if this box had an assigned email, re-enable that email in the sidebar
+    const assigned = box.dataset.assignedEmail;
+    if (assigned && assigned !== "") {
+      enableEmailInSidebar(assigned);
+    }
+
     box.remove();
     const boxDraggedInput = document.getElementById('box-dragged');
-if (boxDraggedInput) {
-    // Current value as number, default 0
-    let currentValue = parseInt(boxDraggedInput.value) || 0;
-
-    // Decrement by 1, but not below 0
-    boxDraggedInput.value = Math.max(0, currentValue - 1);
-}
-
-
-        
+    if (boxDraggedInput) {
+        let currentValue = parseInt(boxDraggedInput.value) || 0;
+        boxDraggedInput.value = Math.max(0, currentValue - 1);
+    }
   });
 
     // Resize
@@ -825,6 +793,107 @@ if (boxDraggedInput) {
   }
 }
 
+/* ----------------- Pairing UI logic ----------------- */
+
+// simple deterministic color palette for recipients
+function getColorForIndex(i) {
+  const colors = ["#e74c3c","#2980b9","#27ae60","#8e44ad","#d35400","#16a085","#7f8c8d"];
+  return colors[i % colors.length];
+}
+
+// read recipient emails from inputs on page (fallback if none)
+function getRecipientEmails() {
+  const inputs = document.querySelectorAll('#recipient-list input[name="email[]"]');
+  if (!inputs || inputs.length === 0) {
+    // placeholder development emails
+    return ["test1@example.com","test2@example.com","test3@example.com"];
+  }
+  return Array.from(inputs).map(i => i.value.trim()).filter(v => v !== "");
+}
+
+// disable radio(s) for an email (so it cannot be used by another box)
+// function disableEmailInSidebar(email) {
+//   document.querySelectorAll(`#emailRadioList input[type="radio"][value="${email}"]`)
+//     .forEach(r => r.disabled = true);
+// }
+
+// enable radio(s) for an email (used when a box with that email is removed/unassigned)
+function enableEmailInSidebar(email) {
+  document.querySelectorAll(`#emailRadioList input[type="radio"][value="${email}"]`)
+    .forEach(r => r.disabled = false);
+}
+
+
+
+/**
+ * openPairingForBox(box)
+ * - populates radios inside #emailRadioList
+ * - sets the required checkbox
+ * - wires change handlers to update box.dataset.assignedEmail and style
+ */
+function openPairingForBox(box) {
+  if (!box) return;
+
+  const container = document.getElementById('emailRadioList');
+  container.innerHTML = "";
+
+  const emails = getRecipientEmails();
+  emails.forEach((email, idx) => {
+    const radioId = `${box.id}_assign_${idx}`;
+    const color = getColorForIndex(idx);
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'form-check mb-1';
+
+    wrapper.innerHTML = `
+      <input class="form-check-input pairing-radio" type="radio"
+             name="assignEmail_${box.id}" id="${radioId}" value="${email}">
+      <label class="form-check-label" for="${radioId}" style="color:${color}">
+        ${email}
+      </label>
+    `;
+
+    // when user picks this email in sidebar
+    const radio = wrapper.querySelector('input');
+    radio.addEventListener('change', () => {
+      // if this box had previously assigned email, re-enable it in sidebar
+      const prev = box.dataset.assignedEmail;
+      if (prev && prev !== "" && prev !== email) {
+        enableEmailInSidebar(prev);
+      }
+
+      box.dataset.assignedEmail = email;
+      box.style.border = `2px solid ${color}`;
+
+      // disable this email so no other box can pick it
+      // disableEmailInSidebar(email);
+    });
+
+    // if box already has this email selected — mark radio and disable others
+    if (box.dataset.assignedEmail === email) {
+      wrapper.querySelector('input').checked = true;
+      // keep it disabled for other boxes
+      // disableEmailInSidebar(email);
+    } else {
+      // if another box already used this email elsewhere, disable it in radio
+      const used = Array.from(document.querySelectorAll('.sig-box')).some(b => b.dataset.assignedEmail === email);
+      if (used) radio.disabled = false;
+    }
+
+    container.appendChild(wrapper);
+  });
+
+  // required checkbox binding
+  const req = document.getElementById('boxRequiredCheckbox');
+  req.checked = box.dataset.required === "true";
+  req.onchange = () => {
+    box.dataset.required = req.checked ? "true" : "false";
+  };
+}
+
+/* ----------------- End pairing functions ----------------- */
+
+
 // Serialize all boxes and submit as percentage
 function serializeBoxes(event,type){
       document.getElementById('loaderOverlay').style.display = 'flex';
@@ -856,8 +925,13 @@ function serializeBoxes(event,type){
         color: box.style.color || '#000000',
         fontWeight: box.style.fontWeight || 'normal',
         fontStyle: box.style.fontStyle || 'normal',
-        textDecoration: box.style.textDecoration || 'none'
+        textDecoration: box.style.textDecoration || 'none',
+        // NEW fields:
+        assigned_email: box.dataset.assignedEmail || "",
+        required: box.dataset.required === "true" ? true : false,
+        box_id: box.dataset.boxId || box.id || ""
       });
+
     });
   });
 
