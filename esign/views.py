@@ -58,9 +58,18 @@ def cookie_settings(request):
 def signup_steps(request):
     return render(request, 'esign/signup_steps.html')
 
+@csrf_exempt  # Only if testing with external POST tools like Postman
 def recipient_details(request):
-    return render(request, 'esign/recipient_details.html')  
-  
+    if request.method == "POST":
+        # Convert POST QueryDict to regular dict
+        data = {key: request.POST.getlist(key) if len(request.POST.getlist(key)) > 1 else request.POST[key]
+                for key in request.POST.keys()}
+        return JsonResponse({"method": "POST", "data": data})
+    else:
+        # GET request: render template as usual
+        return render(request, 'esign/recipient_details.html')
+    
+    
 import random, datetime
 
 def forgot_password(request):

@@ -1,7 +1,8 @@
 {% extends "esign/base_header.html" %}
 {% block content %}
 
-<form class="form" action="#" method="">
+<form class="form" action="{% url 'recipient_details' %}" method="POST">
+    {% csrf_token %}
 
 <div class="container py-2">
     <div class="card shadow-sm p-4">
