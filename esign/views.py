@@ -58,9 +58,18 @@ def cookie_settings(request):
 def signup_steps(request):
     return render(request, 'esign/signup_steps.html')
 
+@csrf_exempt  # Only if testing with external POST tools like Postman
 def recipient_details(request):
-    return render(request, 'esign/recipient_details.html')  
-  
+    if request.method == "POST":
+        # Convert POST QueryDict to regular dict
+        data = {key: request.POST.getlist(key) if len(request.POST.getlist(key)) > 1 else request.POST[key]
+                for key in request.POST.keys()}
+        return JsonResponse({"method": "POST", "data": data})
+    else:
+        # GET request: render template as usual
+        return render(request, 'esign/recipient_details.html')
+    
+    
 import random, datetime
 
 def forgot_password(request):
@@ -2100,6 +2109,36 @@ def checkout_view(request):
     })
 
 
+# @csrf_exempt
+# def create_checkout_session(request):
+#     try:
+#         # Create Stripe checkout session
+#         checkout_session = stripe.checkout.Session.create(
+#             payment_method_types=['card'],
+#             line_items=[{
+#                 'price_data': {
+#                     'currency': 'usd',
+#                     'unit_amount': 2000,  # $20.00
+#                     'product_data': {
+#                         'name': 'Premium Plan',
+#                     },
+#                 },
+#                 'quantity': 1,
+#             }],
+#             mode='payment',
+#             success_url=request.build_absolute_uri(reverse('stripe_success')) + '?session_id={CHECKOUT_SESSION_ID}',
+#             cancel_url=request.build_absolute_uri(reverse('stripe_cancel')),
+#             metadata={
+#                 'plan': 'premium',  # Optional: add any metadata you need
+#                 'user_email': request.user.email if request.user.is_authenticated else 'guest@example.com',
+#             },
+#         )
+
+#         # Return the session id in response
+#         return JsonResponse({'id': checkout_session.id})
+
+#     except Exception as e:
+#         return JsonResponse({'error': str(e)})
 
 
 from django.views.decorators.csrf import csrf_exempt
@@ -2161,25 +2200,26 @@ import razorpay
 @csrf_exempt
 def create_checkout_session(request):
     try:
+       
         data = json.loads(request.body.decode('utf-8'))
-
-        # Plan / Payment Info
-        plan_name = data.get('plan_name', 'Premium')
-        plan = data.get('plan', 'premium')
-        amount = int(float(data.get('amount', 2000))) * 100  # paise
-        currency = data.get('currency', 'INR').upper()
-        interval = data.get('interval', 'month')
-
-        # Customer details
-        first_name = data.get('f_name', '')
-        last_name = data.get('l_name', '')
-        email = data.get('email', '')
-
-        phone = data.get('phone_number', '')
-        if phone.startswith("0"):
-            phone = phone[1:]    # remove leading zero
+        
+        # If data has nested "form_fields":
+        form_fields = data.get("form_fields", {})
+        
+        plan_name = form_fields.get('plan_name', 'Premium')
+        plan = form_fields.get('plan', 'premium')
+        amount = int(form_fields.get('amount', 0)) * 100 # paise
+        currency = form_fields.get('currency', 'INR').upper()
+        interval = form_fields.get('interval', 'month')
+        if amount < 100:
+            return JsonResponse({"error": "Order amount must be at least ₹1"}, status=400)
 
 
+        first_name = form_fields.get('f_name', '')
+        last_name = form_fields.get('l_name', '')
+        email = form_fields.get('email', '')
+        phone = form_fields.get('phone_number', '')
+        # return JsonResponse({'request':form_fields,"data":data})
 
         # Razorpay client
         client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
@@ -2206,7 +2246,7 @@ def create_checkout_session(request):
         # Response to frontend
         return JsonResponse({
             "order_id": order["id"],
-            "amount": amount,
+            "amount": int(amount),
             "currency": currency,
             "key_id": settings.RAZORPAY_KEY_ID,
             "customer": {
@@ -2230,46 +2270,53 @@ def create_checkout_session(request):
 @csrf_exempt
 def razorpay_success(request):
     try:
-        # Razorpay returns POST values
-        payment_id = request.POST.get("razorpay_payment_id")
-        order_id = request.POST.get("razorpay_order_id")
-        signature = request.POST.get("razorpay_signature")
+        # Razorpay Checkout.js → SUCCESS URL ALWAYS RETURNS GET PARAMETERS
+        payment_id = request.GET.get("razorpay_payment_id") or request.POST.get("razorpay_payment_id")
+        order_id = request.GET.get("razorpay_order_id") or request.POST.get("razorpay_order_id")
+        signature = request.GET.get("razorpay_signature") or request.POST.get("razorpay_signature")
 
         if not payment_id or not order_id or not signature:
-            messages.error(request, "Invalid Razorpay response.")
+            messages.error(request, "Invalid Razorpay response (Payment details missing).")
             return redirect("register")
 
         # Razorpay verify signature
         client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+
         params = {
             "razorpay_order_id": order_id,
             "razorpay_payment_id": payment_id,
             "razorpay_signature": signature
         }
+
         client.utility.verify_payment_signature(params)
 
-        # -----------------------------------------------
-        # 1️⃣ Fetch Order Notes (Customer + Plan info)
-        # -----------------------------------------------
+        # ---------------------------------------------------------
+        # Fetch Order + Notes saved on backend during checkout
+        # ---------------------------------------------------------
         order_data = client.order.fetch(order_id)
         notes = order_data.get("notes", {})
 
-        # Fallback from POST (if needed)
-        plan = notes.get("plan") or request.POST.get("plan", "premium")
-        interval = notes.get("interval") or request.POST.get("interval", "month")
+        plan = notes.get("plan", "premium")
+        frontend_interval = notes.get("interval", "month")
+        if frontend_interval == "month":
+            mapped_plan = Subscription.PLAN_MONTHLY
+        elif frontend_interval == "year":
+            mapped_plan = Subscription.PLAN_YEARLY
+        else:
+            mapped_plan = Subscription.PLAN_MONTHLY
+        
+        first_name = notes.get("first_name", "")
+        last_name = notes.get("last_name", "")
 
-        # Customer details
-        first_name = notes.get("first_name") or request.POST.get("first_name", "")
-        last_name = notes.get("last_name") or request.POST.get("last_name", "")
-        user_email = notes.get("email") or request.POST.get("email")
-        phone = notes.get("phone") or request.POST.get("phone", "")
-
+        user_email = notes.get("email") or request.GET.get("email")
         if not user_email:
-            user_email = "guest@example.com"
+            messages.error(request, "Email is required. Please register to continue.")
+            return redirect("register")   
+        phone = notes.get("phone", "")
 
-        # -----------------------------------------------
-        # 2️⃣ Create User (Auto Password)
-        # -----------------------------------------------
+        # ---------------------------------------------------------
+        # Create Auto Password For New User
+        # ---------------------------------------------------------
         import string
         email_prefix = user_email.split("@")[0]
 
@@ -2277,8 +2324,12 @@ def razorpay_success(request):
         digit = random.choice(string.digits)
         special_char = "@"
         random_part = ''.join(random.choices(string.ascii_lowercase + string.digits, k=4))
+
         password = f"{email_prefix[:3]}{uppercase_letter}{digit}{special_char}{random_part}"
 
+        # ---------------------------------------------------------
+        # Create or Fetch User
+        # ---------------------------------------------------------
         user, created = User.objects.get_or_create(
             email=user_email,
             defaults={
@@ -2293,27 +2344,35 @@ def razorpay_success(request):
             user.set_password(password)
             user.save()
 
-        # -----------------------------------------------
-        # 3️⃣ Create Subscription Entry
-        # -----------------------------------------------
-        subscription, created_sub = Subscription.objects.get_or_create(
-            razorpay_payment_id=payment_id,
-            defaults={
-                "user": user,
-                "plan": plan,
-                "stripe_payment_status": "succeeded",
-                "amount_cents": order_data.get("amount_paid", 0),
-                "currency": order_data.get("currency", "INR"),
-                "status": Subscription.STATUS_ACTIVE
-            }
-        )
+        # ---------------------------------------------------------
+        # Create Subscription Entry
+        # ---------------------------------------------------------
+        try:
+            subscription, created_sub = Subscription.objects.get_or_create(
+                razorpay_payment_id=payment_id,
+                defaults={
+                    "user": user,
+                    "plan": mapped_plan,
+                    "stripe_payment_status": "succeeded",
+                    "amount_cents": order_data.get("amount_paid", 0),
+                    "currency": order_data.get("currency", "INR"),
+                    "status": Subscription.STATUS_ACTIVE
+                }
+            )
+        
+            # Set dates
+            subscription.set_active()
+            subscription.save()
+        
+        except Exception as e:
+            print("Subscription create error:", str(e))
+            messages.error(request, "Subscription processing failed. Contact support.")
+            return redirect("register")
+        
 
-        subscription.set_active_dates()
-        subscription.save()
-
-        # -----------------------------------------------
-        # 4️⃣ Send Email (Login Details)
-        # -----------------------------------------------
+        # ---------------------------------------------------------
+        # Send Email
+        # ---------------------------------------------------------
         login_url = request.build_absolute_uri(f"/login/?email={user_email}")
 
         subject = "Your Subscription is Active!"
@@ -2337,9 +2396,9 @@ def razorpay_success(request):
         email.content_subtype = "html"
         email.send()
 
-        # -----------------------------------------------
-        # 5️⃣ Auto Login User
-        # -----------------------------------------------
+        # ---------------------------------------------------------
+        # Auto Login User
+        # ---------------------------------------------------------
         login(request, user, backend='django.contrib.auth.backends.ModelBackend')
 
         return render(request, "payments/success.html")
@@ -2351,12 +2410,11 @@ def razorpay_success(request):
     except Exception as e:
         messages.error(request, str(e))
         return redirect("register")
-
 def razorpay_cancel(request):
     return render(request, "payments/cancel.html")
 
 
-# @csrf_exempt
+
 # def success_view(request):
 #     """
 #     Called after Stripe redirects to success_url.
@@ -2366,6 +2424,10 @@ def razorpay_cancel(request):
 #     session_id = request.GET.get('session_id')
 #     if not session_id:
 #         messages.error(request, "Missing session id.")
+#         return redirect('register')  # adjust to your registration page
+
+#     if not stripe.api_key:
+#         messages.error(request, "Stripe not configured on server.")
 #         return redirect('register')
 
 #     try:
@@ -2374,49 +2436,53 @@ def razorpay_cancel(request):
 #         messages.error(request, f"Stripe error: {str(e)}")
 #         return redirect('register')
 
-#     # Get customer email
-#     customer_email = (session.customer_details.email 
-#                       if hasattr(session, 'customer_details') and session.customer_details 
-#                       else session.customer_email or session.metadata.get('user_email'))
+#     # Get important values
+#     payment_intent = session.get('payment_intent') or (session.get('payment_intent') if isinstance(session, dict) else None)
+#     payment_intent_id = payment_intent.id if hasattr(payment_intent, 'id') else (payment_intent if isinstance(payment_intent, str) else None)
+#     payment_status = session.get('payment_status') or (payment_intent.status if hasattr(payment_intent, 'status') else None)
+#     customer_email = None
+#     try:
+#         customer_email = session.get('customer_details', {}).get('email') or session.get('customer_email')
+#     except Exception:
+#         customer_email = None
+
+#     # metadata (we should have set these when creating session)
+#     metadata = session.get('metadata') or {}
+#     plan = metadata.get('plan') or 'monthly'
+#     amount = None
+#     try:
+#         # get amount from line_items or amount_total if present
+#         amount = session.get('amount_total') or (session['display_items'][0]['amount'] if 'display_items' in session and session['display_items'] else None)
+#     except Exception:
+#         amount = None
+
+#     # If no email from Stripe, try metadata
+#     if not customer_email:
+#         customer_email = metadata.get('user_email')
+
 #     if not customer_email:
 #         messages.error(request, "Could not determine customer email from Stripe session.")
 #         return redirect('register')
-
-#     # Get plan & amount from metadata
-#     plan = session.metadata.get('plan', 'monthly')
-#     interval = session.metadata.get('interval', 'month')
-#     amount_cents = getattr(session, 'amount_total', None)
-#     currency = getattr(session, 'currency', 'usd')
-#     import string
 
 #     # Create or get user
 #     user, created = User.objects.get_or_create(
 #         email=customer_email,
 #         defaults={
-#             'username': customer_email,
-#             'first_name': session.metadata.get('user_name', customer_email.split('@')[0]),
-#              'is_active': True,   # <- yahan set karo instead
+#             'username': customer_email,  # adjust if your User model uses different field
+#             'first_name': metadata.get('user_name', customer_email.split('@')[0]),
 #         }
 #     )
-#     email_prefix = customer_email.split('@')[0]
-    
-#     # Generate random components
-#     uppercase_letter = random.choice(string.ascii_uppercase)
-#     digit = random.choice(string.digits)
-#     special_char = "@"
-#     random_part = ''.join(random.choices(string.ascii_lowercase + string.digits, k=4))
-    
-#     # Combine parts to form password
-#     password = f"{email_prefix[:3]}{uppercase_letter}{digit}{special_char}{random_part}"
-
+#     # If user was just created, set password to default
 #     if created:
-#         user.set_password(password)
+#         user.set_password("12345")
 #         user.save()
+ 
+#     session = stripe.checkout.Session.retrieve(session_id)
 
 #     # Get PaymentIntent to check payment status
-#     payment_intent_id = getattr(session, 'payment_intent', None)
-#     payment_intent = stripe.PaymentIntent.retrieve(payment_intent_id) if payment_intent_id else None
-#     payment_status = getattr(payment_intent, 'status', 'pending')
+#     payment_intent_id = session.payment_intent
+#     payment_intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+#     payment_status = payment_intent.status  # 'succeeded', 'requires_payment_method', etc.
 
 #     # Create or update subscription record
 #     subscription, sub_created = Subscription.objects.get_or_create(
@@ -2424,77 +2490,199 @@ def razorpay_cancel(request):
 #         defaults={
 #             'user': user,
 #             'plan': plan,
-#             'status': Subscription.STATUS_ACTIVE if payment_status in ('succeeded', 'paid', 'complete') else Subscription.STATUS_PENDING,
+#             'status': Subscription.STATUS_ACTIVE if payment_status in ('paid', 'succeeded', 'complete') else Subscription.STATUS_PENDING,
 #             'stripe_payment_intent_id': payment_intent_id,
 #             'stripe_payment_status': payment_status,
-#             'amount_cents': amount_cents,
-#             'currency': currency,
+#             'amount_cents': session.amount_total if hasattr(session, 'amount_total') else None,
+#             'currency': session.currency if hasattr(session, 'currency') else 'usd',
 #         }
 #     )
 
+#     # If it already existed, update fields
 #     if not sub_created:
 #         subscription.user = user
-#         subscription.plan = plan
 #         subscription.stripe_payment_intent_id = payment_intent_id
 #         subscription.stripe_payment_status = payment_status
-#         subscription.amount_cents = amount_cents or subscription.amount_cents
-#         subscription.currency = currency or subscription.currency
-#         if payment_status in ('succeeded', 'paid', 'complete'):
-#             subscription.status = Subscription.STATUS_ACTIVE
+#         subscription.amount_cents = session.get('amount_total') or subscription.amount_cents
+#         subscription.currency = session.get('currency') or subscription.currency
+#         subscription.plan = plan or subscription.plan
+#         # set active dates if payment succeeded
+#         if payment_status in ('paid', 'succeeded', 'complete'):
 #             subscription.set_active_dates()
 #         else:
 #             subscription.status = Subscription.STATUS_PENDING
-#         subscription.save()
+#             subscription.save()
 #     else:
+#         # For new subscription created above, set active dates if paid
 #         if subscription.status == Subscription.STATUS_ACTIVE:
 #             subscription.set_active_dates()
 
-#     # Send login email
-#     # login_url = request.build_absolute_uri(f"/login/?email={customer_email}")
-#     # subject = "Your Subscription is Active!"
-#     # message = f"""
-#     # Hi {customer_email},
-
-#     # Your subscription ({plan}) is now active.
-
-#     # Login Details:
-#     # Email: {customer_email}
-#     # Password: 12345
-
-#     # Click the link below to login:
-#     # {login_url}
-
-#     # Thank you!
-#     # """
-#     # send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [customer_email], fail_silently=False)
 #     login_url = request.build_absolute_uri(f"/login/?email={customer_email}")
-
-#     # Send HTML email using EmailMessage
 #     subject = "Your Subscription is Active!"
-#     html_content = render_to_string("mails/subscription_active_email.html", {
-#         "customer_email": customer_email,
-#         "password":password,
-#         "plan": plan,
-#         "login_url": login_url,
-#     })
+#     message = f"""
+#     Hi {customer_email},
 
-#     email = EmailMessage(
-#         subject=subject,
-#         body=html_content,  # HTML content
-#         from_email=settings.DEFAULT_FROM_EMAIL,
-#         to=[customer_email],
-#     )
-#     email.content_subtype = "html"  # Important!
-#     email.send(fail_silently=False)
-    
-#     # Log user in automatically
+#     Your subscription ({plan}) is now active.
+
+#     Login Details:
+#     Email: {customer_email}
+#     Password: 12345
+
+#     Click the link below to login:
+#     {login_url}
+
+#     Thank you!
+#     """
+#     send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [customer_email], fail_silently=False)
+
+#     # OPTIONAL: if you want to send the login email here, do it (not included).
+#     # Now attempt to login the user immediately
 #     try:
+#         # authenticate by checking password - using default password
+#         # If your AUTHENTICATION_BACKENDS require username, ensure username==email or adapt.
 #         login(request, user, backend='django.contrib.auth.backends.ModelBackend')
 #     except Exception:
+#         # fallback: if login fails, just redirect to login page
 #         pass
 
 #     messages.success(request, "Payment successful. Your account was created.")
 #     return render(request, "payments/success.html")
+
+#     # return redirect(reverse('dashboard'))  # change to your dashboard route
+
+
+
+
+
+@csrf_exempt
+def success_view(request):
+    """
+    Called after Stripe redirects to success_url.
+    Expects ?session_id=... in URL.
+    Retrieves Stripe session, then creates user & subscription record.
+    """
+    session_id = request.GET.get('session_id')
+    if not session_id:
+        messages.error(request, "Missing session id.")
+        return redirect('register')
+
+    try:
+        session = stripe.checkout.Session.retrieve(session_id, expand=['payment_intent', 'customer_details'])
+    except stripe.error.StripeError as e:
+        messages.error(request, f"Stripe error: {str(e)}")
+        return redirect('register')
+
+    # Get customer email
+    customer_email = (session.customer_details.email 
+                      if hasattr(session, 'customer_details') and session.customer_details 
+                      else session.customer_email or session.metadata.get('user_email'))
+    if not customer_email:
+        messages.error(request, "Could not determine customer email from Stripe session.")
+        return redirect('register')
+
+    # Get plan & amount from metadata
+    plan = session.metadata.get('plan', '')
+    frontend_interval = session.metadata.get('interval', '')
+    amount_cents = getattr(session, 'amount_total', None)
+    currency = getattr(session, 'currency', 'usd')
+    import string
+    
+    if frontend_interval == "month":
+        mapped_plan = Subscription.PLAN_MONTHLY
+    elif frontend_interval == "year":
+        mapped_plan = Subscription.PLAN_YEARLY
+    else:
+        mapped_plan = Subscription.PLAN_MONTHLY
+        
+    # Create or get user
+    user, created = User.objects.get_or_create(
+        email=customer_email,
+        defaults={
+            'username': customer_email,
+            'first_name': session.metadata.get('user_name', customer_email.split('@')[0]),
+             'is_active': True,   # <- yahan set karo instead
+        }
+    )
+    email_prefix = customer_email.split('@')[0]
+    
+    # Generate random components
+    uppercase_letter = random.choice(string.ascii_uppercase)
+    digit = random.choice(string.digits)
+    special_char = "@"
+    random_part = ''.join(random.choices(string.ascii_lowercase + string.digits, k=4))
+    
+    # Combine parts to form password
+    password = f"{email_prefix[:3]}{uppercase_letter}{digit}{special_char}{random_part}"
+
+    if created:
+        user.set_password(password)
+        user.save()
+
+    # Get PaymentIntent to check payment status
+    payment_intent_id = getattr(session, 'payment_intent', None)
+    payment_intent = stripe.PaymentIntent.retrieve(payment_intent_id) if payment_intent_id else None
+    payment_status = getattr(payment_intent, 'status', 'pending')
+
+    # Create or update subscription record
+    subscription, sub_created = Subscription.objects.get_or_create(
+        stripe_checkout_session_id=session_id,
+        defaults={
+            'user': user,
+            'plan': mapped_plan,
+            'status': Subscription.STATUS_ACTIVE if payment_status in ('succeeded', 'paid', 'complete') else Subscription.STATUS_PENDING,
+            'stripe_payment_intent_id': payment_intent_id,
+            'stripe_payment_status': payment_status,
+            'amount_cents': amount_cents,
+            'currency': currency,
+        }
+    )
+
+    if not sub_created:
+        subscription.user = user
+        subscription.plan = plan
+        subscription.stripe_payment_intent_id = payment_intent_id
+        subscription.stripe_payment_status = payment_status
+        subscription.amount_cents = amount_cents or subscription.amount_cents
+        subscription.currency = currency or subscription.currency
+        if payment_status in ('succeeded', 'paid', 'complete'):
+            subscription.status = Subscription.STATUS_ACTIVE
+            subscription.set_active_dates()
+        else:
+            subscription.status = Subscription.STATUS_PENDING
+        subscription.save()
+    else:
+        if subscription.status == Subscription.STATUS_ACTIVE:
+            subscription.set_active_dates()
+
+   
+    login_url = request.build_absolute_uri(f"/login/?email={customer_email}")
+
+    # Send HTML email using EmailMessage
+    subject = "Your Subscription is Active!"
+    html_content = render_to_string("mails/subscription_active_email.html", {
+        "customer_email": customer_email,
+        "password":password,
+        "plan": plan,
+        "login_url": login_url,
+    })
+
+    email = EmailMessage(
+        subject=subject,
+        body=html_content,  # HTML content
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=[customer_email],
+    )
+    email.content_subtype = "html"  # Important!
+    email.send(fail_silently=False)
+    
+    # Log user in automatically
+    try:
+        login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+    except Exception:
+        pass
+
+    messages.success(request, "Payment successful. Your account was created.")
+    return render(request, "payments/success.html")
 
 
 def cancel_view(request):

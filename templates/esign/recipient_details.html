@@ -1,7 +1,8 @@
 {% extends "esign/base_header.html" %}
 {% block content %}
 
-<form class="form" action="#" method="">
+<form class="form" action="{% url 'recipient_details' %}" method="POST">
+    {% csrf_token %}
 
 <div class="container py-2">
     <div class="card shadow-sm p-4">
@@ -22,7 +23,7 @@
                 Upload
             </button>
             
-            <input type="file" id="pdfInput" accept="application/pdf" class="hidden-input">
+            <input type="file" required id="pdfInput"  style="opacity:0; width:1px; height:1px;">
         </div>
 
     </div>
