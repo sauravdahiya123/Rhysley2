@@ -56,7 +56,10 @@ def cookie_settings(request):
     return render(request, 'esign/cookie_settings.html')    
 
 def signup_steps(request):
-    return render(request, 'esign/signup_steps.html')  
+    return render(request, 'esign/signup_steps.html')
+
+def recipient_details(request):
+    return render(request, 'esign/recipient_details.html')  
   
 import random, datetime
 

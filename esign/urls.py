@@ -55,6 +55,7 @@ urlpatterns = [
     path('send-mobile-otp/', views.send_mobile_otp, name='send_mobile_otp'),
     path('otp_email/', views.otp_email, name='otp_email'),
     path('password_email/', views.password_email, name='password_email'),
+    path('recipient_details/', views.recipient_details, name='recipient_details'),
 
 
 ]

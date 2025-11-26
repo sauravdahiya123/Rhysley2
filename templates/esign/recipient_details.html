@@ -1,0 +1,388 @@
+{% extends "esign/base_header.html" %}
+{% block content %}
+
+<form class="form" action="#" method="">
+
+<div class="container py-2">
+    <div class="card shadow-sm p-4">
+    <h3 class="mb-3 h4">Add Documents</h3>
+
+    <div id="containerBox" class="d-flex justify-content-between">
+        
+        <!-- Preview Area -->
+        <div id="previewArea">
+            <div id="loader" class="loader" style="display:none;"></div>
+        </div>
+
+        <!-- Dropzone Box -->
+        <div id="dropzone" class="dropzone flex-grow-1">
+            <p class="mb-3 fw-bold">Drop your files here or</p>
+
+            <button id="uploadBtn" type="button" class="btn btn-primary px-5 py-2">
+                Upload
+            </button>
+            
+            <input type="file" id="pdfInput" accept="application/pdf" class="hidden-input">
+        </div>
+
+    </div>
+</div>
+</div>
+
+
+<!-- RECIPIENT SECTION -->
+<div class="container mb-4">
+
+    <h3 class="mb-3 h4">Add recipients</h3>
+
+    <!-- NEW RADIO BUTTON SET -->
+    <div class="mb-4 d-flex align-items-center gap-4">
+
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="signOrderOption" id="radioOrder" checked>
+            <label class="form-check-label" for="radioOrder">In Order</label>
+        </div>
+
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="signOrderOption" id="radioInOrder">
+            <label class="form-check-label" for="radioInOrder">Order</label>
+        </div>
+
+    </div>
+
+    <!-- RECIPIENTS CONTAINER -->
+    <div id="recipientsContainer">
+
+        <!-- TEMPLATE -->
+        <div class="recipientBox border rounded p-4 mb-2 position-relative" data-recipient>
+
+            
+
+            <!-- ORDER NUMBER (Now read-only and not editable) -->
+            <div class="orderNumber bg-info text-white px-3 py-4 position-absolute top-50 
+                        translate-middle-y start-0 fs-4 fw-bold" contenteditable="false">
+                1
+            </div>
+
+            <div class="details-wrapper">
+              <div class="row">
+                <div class="col-md-8">
+                  <!-- NAME -->
+                  <div class="mb-3">
+                      <label class="form-label">Name *</label>
+                      <input type="text" class="form-control" placeholder="Enter name">
+                  </div>
+
+                  <!-- EMAIL -->
+                  <div class="mb-0">
+                      <label class="form-label">Email *</label>
+                      <input type="email" class="form-control" placeholder="Enter email">
+                  </div>
+                </div>
+                <div class="col-md-2 offset-md-1">
+                  <div class="d-flex gap-3 mb-4 w-100">
+                    <div class="dropdown w-100">
+                        <button class="btn btn-light dropdown-toggle px-4 w-100" type="button" data-bs-toggle="dropdown">
+                            Needs to Sign
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#">Needs to Sign</a></li>
+                            <li><a class="dropdown-item" href="#">View Only</a></li>
+                            <li><a class="dropdown-item" href="#">Receives a Copy (CC)</a></li>
+                        </ul>
+                      </div>
+                    </div>
+                </div>
+                <div class="col-md-1 text-end">
+                  <!-- DELETE BTN -->
+                  <button type="button" class="btn btn-danger deleteRecipientBtn">
+                      <i class="far fa-trash-alt"></i>
+                  </button>
+                </div>
+              </div>
+                <!-- ROLE DROPDOWN -->           
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ADD RECIPIENT -->
+    <button id="addRecipientBtn" class="btn btn-primary">+ Add Recipient</button>
+
+</div>
+
+<!-- MESSAGE SECTION -->
+<div class="container my-3">
+    <div class="accordion" id="accordionExample">
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="headingOne">
+            <button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne">
+                Add Message
+            </button>
+            </h2>
+
+            <div id="collapseOne" class="accordion-collapse collapse show">
+            <div class="accordion-body">
+
+                <!-- SUBJECT -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <label class="form-label">Subject *</label>
+                        <div id="subjectCount" class="small text-muted">0/100</div>
+                    </div>
+                    <input type="text" id="subjectInput" class="form-control" maxlength="100" placeholder="Enter subject">
+                </div>
+
+                <!-- MESSAGE -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <label class="form-label">Message *</label>
+                        <div id="messageCount" class="small text-muted">0/1000</div>
+                    </div>
+                    <textarea id="messageTextarea" class="form-control" rows="5" maxlength="1000" placeholder="Enter message"></textarea>
+                </div>
+
+            </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container mb-5">
+    <div class="row">
+        <div class="col-md-4">
+            <label for="frequencyReminders" class="form-label">Frequency of reminders</label>
+            <select class="form-select" id="frequencyReminders" aria-label="Default select example">
+                <option selected>Choose a reminders frequency</option>
+                <option value="Every Day">Every Day</option>
+                <option value="Every 2 Day">Every 2 Day</option>
+                <option value="Every 3 Day">Every 3 Day</option>
+                <option value="Every 4 Day">Every 4 Day</option>
+                <option value="Every 5 Day">Every 5 Day</option>
+                <option value="Every 6 Day">Every 6 Day</option>
+                <option value="Every 7 Day">Every 7 Day</option>
+            </select> </div> <div class="col-md-8"></div>
+    </div>
+</div>
+
+</form>
+
+<!-- PDF.js ES5 build (REQUIRED) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.mjs" type="module"></script>
+
+<script type="module">
+import * as pdfjsLib from "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.mjs";
+
+// Worker
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.mjs";
+
+// Generate thumbnail from first page
+async function generateThumbnail(file) {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+    const page = await pdf.getPage(1);
+    const viewport = page.getViewport({ scale: 0.4 });
+
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+
+    await page.render({
+        canvasContext: ctx,
+        viewport: viewport
+    }).promise;
+
+    return { canvas, pageCount: pdf.numPages };
+}
+
+document.getElementById("pdfInput").addEventListener("change", function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const fileURL = URL.createObjectURL(file);
+
+    pdfjsLib.getDocument(fileURL).promise.then(async function(pdf) {
+        const page = await pdf.getPage(1);
+        const viewport = page.getViewport({ scale: 1.2 });
+
+        // Create card
+        const card = document.createElement("div");
+        card.className = "preview-card";
+
+        // Thumbnail container
+        const thumb = document.createElement("div");
+        thumb.className = "preview-thumb";
+
+        // Canvas
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d");
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        thumb.appendChild(canvas);
+
+        // File details
+        const info = document.createElement("div");
+        info.style.padding = "16px";
+        info.innerHTML = `
+            <strong>${file.name}</strong>
+            <div>${pdf.numPages} pages</div>
+        `;
+
+        card.appendChild(thumb);
+        card.appendChild(info);
+
+        // Clear old preview
+        document.getElementById("previewArea").innerHTML = "";
+        document.getElementById("previewArea").appendChild(card);
+
+        // Render first page
+        page.render({
+            canvasContext: context,
+            viewport
+        });
+    });
+});
+</script>
+<script>
+    const containerBox = document.getElementById("containerBox");
+    const dropzone = document.getElementById("dropzone");
+    const uploadBtn = document.getElementById("uploadBtn");
+    const pdfInput = document.getElementById("pdfInput");
+    const previewArea = document.getElementById("previewArea");
+    const loader = document.getElementById("loader");
+
+    /* CLICK to open */
+    uploadBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        pdfInput.click();
+    });
+
+    dropzone.addEventListener("click", () => {
+        pdfInput.click();
+    });
+
+    /* DRAG & DROP */
+    dropzone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropzone.style.background = "#f8f9fa";
+    });
+
+    dropzone.addEventListener("dragleave", () => {
+        dropzone.style.background = "";
+    });
+
+    dropzone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropzone.style.background = "";
+        pdfInput.files = e.dataTransfer.files;
+        handlePDF(pdfInput.files[0]);
+    });
+
+    /* FILE SELECTED */
+    pdfInput.addEventListener("change", () => {
+        if (pdfInput.files.length > 0) {
+            handlePDF(pdfInput.files[0]);
+        }
+    });
+
+    function handlePDF(file) {
+        if (file.type !== "application/pdf") {
+            alert("Please upload a PDF file.");
+            return;
+        }
+
+        // Show loader
+        loader.style.display = "block";
+
+        // Smooth transition
+        containerBox.classList.add("show-preview");
+
+        const fileURL = URL.createObjectURL(file);
+
+        // Create iframe
+        const iframe = document.createElement("iframe");
+        iframe.src = fileURL;
+
+        // Hide iframe initially until fully loaded
+        iframe.style.display = "none";
+
+        previewArea.innerHTML = "";
+        previewArea.appendChild(loader);
+        previewArea.appendChild(iframe);
+
+        // When PDF preview has fully loaded
+        iframe.onload = function () {
+            loader.style.display = "none";
+            iframe.style.display = "block";
+        };
+    }
+</script>
+<!-- ================= CUSTOM JS ================= -->
+<script>
+// CORE ELEMENTS
+const recipientsContainer = document.getElementById("recipientsContainer");
+const template = document.querySelector(".recipientBox");
+const addRecipientBtn = document.getElementById("addRecipientBtn");
+
+const radioOrder = document.getElementById("radioOrder");
+const radioInOrder = document.getElementById("radioInOrder");
+
+// ----------------------
+// Update Order Numbers
+// ----------------------
+function updateOrderNumbers() {
+    const show = radioInOrder.checked;
+    const boxes = document.querySelectorAll("[data-recipient]");
+
+    boxes.forEach((box, i) => {
+        const num = box.querySelector(".orderNumber");
+        const wrap = box.querySelector(".details-wrapper");
+
+        num.textContent = i + 1;
+        num.style.display = show ? "flex" : "none";
+        wrap.style.marginLeft = show ? "80px" : "0";
+    });
+}
+
+// ----------------------
+// Add Recipient
+// ----------------------
+addRecipientBtn.addEventListener("click", () => {
+    const clone = template.cloneNode(true);
+    recipientsContainer.appendChild(clone);
+    updateOrderNumbers();
+});
+
+// ----------------------
+// Delete Recipient
+// ----------------------
+recipientsContainer.addEventListener("click", (e) => {
+    if (e.target.classList.contains("deleteRecipientBtn")) {
+        e.target.closest(".recipientBox").remove();
+        updateOrderNumbers();
+    }
+});
+
+// ----------------------
+// Radio Button Behavior
+// ----------------------
+radioOrder.addEventListener("change", updateOrderNumbers);
+radioInOrder.addEventListener("change", updateOrderNumbers);
+
+// ----------------------
+// Character Counter
+// ----------------------
+document.getElementById("subjectInput").addEventListener("input", function () {
+    subjectCount.textContent = `${this.value.length}/100`;
+});
+
+document.getElementById("messageTextarea").addEventListener("input", function () {
+    messageCount.textContent = `${this.value.length}/1000`;
+});
+</script>
+
+{% endblock %}
