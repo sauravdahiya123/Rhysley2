@@ -242,6 +242,9 @@ class Subscription(models.Model):
     stripe_checkout_session_id = models.CharField(max_length=255, blank=True, null=True)
     stripe_payment_intent_id = models.CharField(max_length=255, blank=True, null=True)
     stripe_payment_status = models.CharField(max_length=50, blank=True, null=True)
+    razorpay_payment_id = models.CharField(max_length=255, blank=True, null=True)
+    razorpay_order_id = models.CharField(max_length=255, blank=True, null=True)
+    razorpay_signature = models.CharField(max_length=255, blank=True, null=True)
 
     amount_cents = models.PositiveIntegerField(null=True, blank=True)  # store amount in cents
     currency = models.CharField(max_length=10, default='usd')
