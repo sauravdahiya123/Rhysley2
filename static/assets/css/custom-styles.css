@@ -27,6 +27,12 @@
     top: -6px;
   }
 
+#accordionFlushRecipients .accordion-button::after{
+  width: 0.9rem;
+    height: 0.9rem;
+    background-size: 0.9rem;
+}
+
 /* Saurav ki CSS */
 .login-icon-box{
   width: 60px;
@@ -168,8 +174,8 @@ canvas { display: block; width: 100%; height: auto; }
 .format-sidebar {
   position: fixed;
   top: 0;
-  right: -300px; /* hidden by default */
-  width: 300px;
+  right: -320px; /* hidden by default */
+  width: 320px;
   height: 100%;
   /*background: #fff;
   border-left: 1px solid #ddd;

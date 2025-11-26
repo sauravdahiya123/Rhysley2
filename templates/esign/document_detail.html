@@ -91,16 +91,16 @@
 
 
 <div class="row justify-content-center">
-  <div class="col-md-12 col-lg-3">
+  <div class="col-md-12 col-lg-2">
     <div class="card position-sticky top-0">
-      <div class="card-body">
+      <div class="card-body p-2">
         <!-- Signature Sidebar -->
         <div class="signature-sidebar">
-          <h5>Draggable Elements</h5>
+          <h5 class="h6">Draggable Elements</h5>
 
           <!-- Existing -->
           <div class="signature-template btn btn-outline-secondary border-dashed mb-2" data-type="signature" id="template-sign">
-            <i class="fas fa-pencil-alt me-2"></i> Sign Here
+            <i class="fas fa-pencil-alt me-1"></i> Sign Here
           </div>
 
           <div class="signature-template btn btn-outline-secondary border-dashed mb-2" data-type="stamp" id="template-stamp">
@@ -113,7 +113,7 @@
           </div>
 
           <div class="signature-template btn btn-outline-secondary border-dashed mb-2" data-type="date" id="template-date">
-            <i class="fas fa-calendar-alt me-2"></i> Date Signed
+            <i class="fas fa-calendar-alt me-1"></i> Date Signed
           </div>
 <!-- 
           <div class="signature-template btn btn-outline-secondary border-dashed mb-2" data-type="company-stamp" id="template-company-stamp">
@@ -212,7 +212,7 @@
 }
 
 </style>
-<div class="col-md-12 col-lg-9">
+<div class="col-md-12 col-lg-10">
      <p>Document for Review & Signature</p>
 
 <div class="d-flex position-relative">
@@ -662,8 +662,60 @@ function validateAndSerialize(event) {
 
 <!-- Formatting Sidebar -->
 <div class="format-sidebar bg-light p-3 shadow-lg" id="formatSidebar">
-  <h6 id="formatTitle">Signature Formatting</h6>
 
+  <div class="accordion accordion-flush mb-2" id="accordionFlushRecipients">
+  <div class="accordion-item">
+    <h2 class="accordion-header" id="flush-headingOne">
+      <button class="accordion-button rounded p-2 py-1 bg-transparent collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseOne" aria-expanded="false" aria-controls="flush-collapseOne">
+        Select Recipients
+      </button>
+    </h2>
+    <div id="flush-collapseOne" class="accordion-collapse collapse" aria-labelledby="flush-headingOne" data-bs-parent="#accordionFlushRecipients">
+      <div class="accordion-body p-2">
+          <div class="form-check mb-1">
+              <input class="form-check-input" type="radio" name="recipientsRadios" id="recipientsRadios1" value="option1" checked="">
+              <label class="form-check-label" for="recipientsRadios1">
+                dinesh.siwas@rmail.team
+              </label>
+          </div>
+          <div class="form-check mb-1">
+              <input class="form-check-input" type="radio" name="recipientsRadios" id="recipientsRadios2" value="option2">
+              <label class="form-check-label" for="recipientsRadios2">
+                amit.kumar@rmail.team
+              </label>
+          </div>
+          <div class="form-check mb-1">
+              <input class="form-check-input" type="radio" name="recipientsRadios" id="recipientsRadios3" value="option3">
+              <label class="form-check-label" for="recipientsRadios3">
+                jyoti.yadav@rmail.team
+              </label>
+          </div>
+          <div class="form-check mb-1">
+              <input class="form-check-input" type="radio" name="recipientsRadios" id="recipientsRadios4" value="option4">
+              <label class="form-check-label" for="recipientsRadios4">
+                priyanka.pal@rmail.team
+              </label>
+          </div>
+          <div class="form-check mb-1">
+              <input class="form-check-input" type="radio" name="recipientsRadios" id="recipientsRadios5" value="option5">
+              <label class="form-check-label" for="recipientsRadios5">
+                saurav.dahiya@rmail.team
+              </label>
+          </div>
+        </div>
+    </div>
+
+  </div>
+  </div>
+
+  <div class="form-check mb-3">
+      <input class="form-check-input" type="checkbox" value="" id="flexCheckRequired" Required>
+      <label class="form-check-label" for="flexCheckRequired">
+        Required
+      </label>
+    </div>
+
+  <h6 id="formatTitle">Signature Formatting</h6>  
   <label class="form-label mt-2">Font Family</label>
   <select id="fontFamily" class="form-select form-select-sm">
     <option value="Arial">Arial</option>
