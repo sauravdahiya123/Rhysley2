@@ -22,7 +22,7 @@
                 Upload
             </button>
             
-            <input type="file" id="pdfInput" accept="application/pdf" class="hidden-input">
+            <input type="file" required id="pdfInput"  style="opacity:0; width:1px; height:1px;">
         </div>
 
     </div>
@@ -69,29 +69,24 @@
                 <div class="col-md-8">
                   <!-- NAME -->
                   <div class="mb-3">
-                      <label class="form-label">Name *</label>
-                      <input type="text" class="form-control" placeholder="Enter name">
+                      <label class="form-label">Name <span class="text-danger">*</span></label>
+                      <input type="text" class="form-control" id="name" placeholder="Enter name" required>
                   </div>
 
                   <!-- EMAIL -->
                   <div class="mb-0">
-                      <label class="form-label">Email *</label>
-                      <input type="email" class="form-control" placeholder="Enter email">
+                      <label class="form-label">Email <span class="text-danger">*</span></label>
+                      <input type="email" class="form-control" id="email" placeholder="Enter email" required>
                   </div>
                 </div>
                 <div class="col-md-2 offset-md-1">
                   <div class="d-flex gap-3 mb-4 w-100">
-                    <div class="dropdown w-100">
-                        <button class="btn btn-light dropdown-toggle px-4 w-100" type="button" data-bs-toggle="dropdown">
-                            Needs to Sign
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#">Needs to Sign</a></li>
-                            <li><a class="dropdown-item" href="#">View Only</a></li>
-                            <li><a class="dropdown-item" href="#">Receives a Copy (CC)</a></li>
-                            
-                        </ul>
-                      </div>
+                      <select class="form-select" id="signUserActions" aria-label="Sign User Actions" required>
+                        <option selected>Needs to Sign</option>
+                        <option value="Needs to Sign">Needs to Sign</option>
+                        <option value="View Only">View Only</option>
+                        <option value="Receives a Copy (CC)">Receives a Copy (CC)</option>
+                    </select>
                     </div>
                 </div>
                 <div class="col-md-1 text-end">
@@ -128,7 +123,7 @@
                 <!-- SUBJECT -->
                 <div class="mb-3">
                     <div class="d-flex justify-content-between">
-                        <label class="form-label">Subject *</label>
+                        <label class="form-label">Subject <span class="text-danger">*</span></label>
                         <div id="subjectCount" class="small text-muted">0/100</div>
                     </div>
                     <input type="text" id="subjectInput" class="form-control" maxlength="100" placeholder="Enter subject">
@@ -137,7 +132,7 @@
                 <!-- MESSAGE -->
                 <div class="mb-3">
                     <div class="d-flex justify-content-between">
-                        <label class="form-label">Message *</label>
+                        <label class="form-label">Message <span class="text-danger">*</span></label>
                         <div id="messageCount" class="small text-muted">0/1000</div>
                     </div>
                     <textarea id="messageTextarea" class="form-control" rows="5" maxlength="1000" placeholder="Enter message"></textarea>
@@ -162,7 +157,12 @@
                 <option value="Every 5 Day">Every 5 Day</option>
                 <option value="Every 6 Day">Every 6 Day</option>
                 <option value="Every 7 Day">Every 7 Day</option>
-            </select> </div> <div class="col-md-8"></div>
+            </select> </div>
+            <div class="col-md-8 text-end">
+              <button class="btn btn-primary px-5 py-2" type="submit">
+                Submit
+            </button>
+            </div>
     </div>
 </div>
 
@@ -350,21 +350,81 @@ function updateOrderNumbers() {
 }
 
 // ----------------------
-// Add Recipient
+// Hide Delete Button When Only One Box Exists
+// ----------------------
+function updateDeleteButtonsVisibility() {
+    const boxes = document.querySelectorAll("[data-recipient]");
+    const showDelete = boxes.length > 1;
+
+    boxes.forEach((box) => {
+        const btn = box.querySelector(".deleteRecipientBtn");
+        if (btn) {
+            btn.style.display = showDelete ? "inline-flex" : "none";
+        }
+    });
+}
+
+// ----------------------
+// Add Recipient (incremental IDs including the select #signUserActions)
+// Replace your existing Add Recipient block with this
 // ----------------------
 addRecipientBtn.addEventListener("click", () => {
+    // Clone template
     const clone = template.cloneNode(true);
+
+    // Compute next incremental index based on current recipient boxes
+    const boxes = document.querySelectorAll("[data-recipient]");
+    const nextIndex = boxes.length + 1;
+
+    // --- Update inputs inside clone ---
+    clone.querySelectorAll("input").forEach((inp) => {
+        // clear values
+        inp.value = "";
+
+        // set incremental IDs for text/email inputs if present
+        const base = (inp.type === "text") ? "name" : (inp.type === "email") ? "email" : null;
+        if (base) inp.id = `${base}_${nextIndex}`;
+    });
+
+    // --- Update labels inside clone so they point to new ids (if labels use for="...") ---
+    clone.querySelectorAll("label").forEach((lbl) => {
+        const oldFor = lbl.getAttribute("for");
+        if (!oldFor) return;
+        const base = oldFor.split("_")[0]; // keeps 'name', 'email', etc.
+        lbl.setAttribute("for", `${base}_${nextIndex}`);
+    });
+
+    // --- Update the select (the one that originally had id="signUserActions") ---
+    // Try to find it inside the cloned subtree (do NOT search document)
+    const sel = clone.querySelector("#signUserActions") || clone.querySelector("select.form-select");
+    if (sel) {
+        // give it a clean incremental id and clear selection
+        sel.id = `signUserActions_${nextIndex}`;
+        sel.selectedIndex = 0; // reset to first option
+        // optional: ensure a name attribute for form submission
+        if (!sel.name) sel.name = "signUserActions[]";
+    }
+
+    // Append the clone to container
     recipientsContainer.appendChild(clone);
+
+    // Keep rest of your logic in sync
     updateOrderNumbers();
+    updateDeleteButtonsVisibility();
 });
 
 // ----------------------
-// Delete Recipient
+// Delete Recipient (Click icon or button)
 // ----------------------
 recipientsContainer.addEventListener("click", (e) => {
-    if (e.target.classList.contains("deleteRecipientBtn")) {
-        e.target.closest(".recipientBox").remove();
+    const deleteBtn = e.target.closest(".deleteRecipientBtn");
+    if (!deleteBtn) return;
+
+    const box = deleteBtn.closest(".recipientBox");
+    if (box) {
+        box.remove();
         updateOrderNumbers();
+        updateDeleteButtonsVisibility();
     }
 });
 
@@ -384,6 +444,11 @@ document.getElementById("subjectInput").addEventListener("input", function () {
 document.getElementById("messageTextarea").addEventListener("input", function () {
     messageCount.textContent = `${this.value.length}/1000`;
 });
+
+// ----------------------
+// INITIAL STATE: hide delete button if only one box
+// ----------------------
+updateDeleteButtonsVisibility();
 </script>
 
 {% endblock %}
