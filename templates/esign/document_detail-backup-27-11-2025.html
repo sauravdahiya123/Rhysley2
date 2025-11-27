@@ -683,61 +683,29 @@ if(foundPage){
 });
 
 document.addEventListener('mouseup', e => {
-  if (!draggingBox) return;
+  if(!draggingBox) return;
 
-  // 1️⃣ First: finish the drag and attach handles
+    if (draggingBox) {
+
+    selectedBox = draggingBox;
+    autoAssignFirstEmail(selectedBox);
+
+    // Force sidebar to open after DOM updates
+    setTimeout(() => {
+        sidebar.classList.add('active');
+    }, 50);
+
+    showFormatSidebar(selectedBox);
+    openPairingForBox(selectedBox);
+}
+
+
   draggingBox.classList.remove('dragging');
-
-  if (currentPage) {
-    // makeDraggable will create resize + rotate handles here
-    makeDraggable(draggingBox, currentPage);
-  }
-
-  // 2️⃣ Now we can safely auto-assign email AND color rotate-handle,
-  // because rotateHandle now exists on this box.
-  selectedBox = draggingBox;
-  autoAssignFirstEmail(selectedBox);
-
-  // 3️⃣ Open sidebar + formatting + pairing UI
-  setTimeout(() => {
-    sidebar.classList.add('active');
-  }, 50);
-
-  showFormatSidebar(selectedBox);
-  openPairingForBox(selectedBox);
-
-  // 4️⃣ Cleanup
+  if(currentPage) makeDraggable(draggingBox, currentPage);
   draggingBox = null;
   currentPage = null;
   isDraggingSignature = false;
 });
-
-
-function clearSidebarSelection() {
-
-  // Remove radio selections
-  const radioContainer = document.getElementById('emailRadioList');
-  if (radioContainer) {
-    radioContainer.innerHTML = "";
-  }
-
-  // Reset required checkbox
-  const req = document.getElementById('boxRequiredCheckbox');
-  if (req) {
-    req.checked = false;
-  }
-
-  // Reset title
-  const title = document.getElementById('formatTitle');
-  if (title) {
-    title.textContent = "Signature Formatting";
-  }
-
-  // Remove active class from sidebar
-  const sidebar = document.getElementById('formatSidebar');
-  sidebar.classList.remove('active');
-}
-
 
 // Drag, Resize, Rotate
 function makeDraggable(box, pageDiv){
@@ -773,33 +741,23 @@ function makeDraggable(box, pageDiv){
   box.appendChild(deleteBtn);
 
   // Delete box when clicked
+  // Delete box when clicked
   deleteBtn.addEventListener('click', (e) => {
-  e.stopPropagation();
+    e.stopPropagation();
 
-  const assigned = box.dataset.assignedEmail;
+    // if this box had an assigned email, re-enable that email in the sidebar
+    const assigned = box.dataset.assignedEmail;
+    if (assigned && assigned !== "") {
+      enableEmailInSidebar(assigned);
+    }
 
-  // ✅ Re-enable that email immediately
-  if (assigned && assigned !== "") {
-    enableEmailInSidebar(assigned);
-  }
-
-  // ✅ If this box is currently selected in sidebar → cleanup UI
-  if (selectedBox === box) {
-    clearSidebarSelection();
-    selectedBox = null;
-  }
-
-  // ✅ Remove the box itself
-  box.remove();
-
-  // Box counter logic stays
-  const boxDraggedInput = document.getElementById('box-dragged');
-  if (boxDraggedInput) {
-      let currentValue = parseInt(boxDraggedInput.value) || 0;
-      boxDraggedInput.value = Math.max(0, currentValue - 1);
-  }
-});
-
+    box.remove();
+    const boxDraggedInput = document.getElementById('box-dragged');
+    if (boxDraggedInput) {
+        let currentValue = parseInt(boxDraggedInput.value) || 0;
+        boxDraggedInput.value = Math.max(0, currentValue - 1);
+    }
+  });
 
     // Resize
   resizeHandle.addEventListener('mousedown', e=>{
@@ -837,25 +795,15 @@ function makeDraggable(box, pageDiv){
     box.setAttribute('contenteditable','true');
     box.style.padding='5px'; box.style.textAlign='center';
   }
-
 }
 
 /* ----------------- Pairing UI logic ----------------- */
 
 // simple deterministic color palette for recipients
-function getColorForEmail(email) {
-  let hash = 0;
-  for (let i = 0; i < email.length; i++) {
-    hash = email.charCodeAt(i) + ((hash << 5) - hash);
-  }
-
-  const hue = Math.abs(hash % 360);
-  const saturation = 70;
-  const lightness = 50;
-
-  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+function getColorForIndex(i) {
+  const colors = ["#e74c3c","#2980b9","#27ae60","#8e44ad","#d35400","#16a085","#7f8c8d"];
+  return colors[i % colors.length];
 }
-
 
 // read recipient emails from inputs on page (fallback if none)
 function getRecipientEmails() {
@@ -885,16 +833,6 @@ function autoAssignFirstEmail(box) {
     if (!emails || emails.length === 0) return;
 
     const firstEmail = emails[0];
-    const color = getColorForEmail(firstEmail);
-
-    box.dataset.assignedEmail = firstEmail;
-    box.style.border = `2px solid ${color}`;
-
-    const rotateHandle = box.querySelector('.rotate-handle');
-    if (rotateHandle) {
-      rotateHandle.style.background = color;
-      rotateHandle.style.borderColor = color;
-    }
 
     // Only assign if not already assigned
     if (!box.dataset.assignedEmail) {
@@ -918,7 +856,7 @@ function openPairingForBox(box) {
   const emails = getRecipientEmails();
   emails.forEach((email, idx) => {
     const radioId = `${box.id}_assign_${idx}`;
-    const color = getColorForEmail(email);
+    const color = getColorForIndex(idx);
 
     const wrapper = document.createElement('div');
     wrapper.className = 'form-check mb-1';
@@ -941,16 +879,7 @@ function openPairingForBox(box) {
       }
 
       box.dataset.assignedEmail = email;
-
-      // Border color
       box.style.border = `2px solid ${color}`;
-
-      // Rotate handle color
-      const rotateHandle = box.querySelector('.rotate-handle');
-      if (rotateHandle) {
-        rotateHandle.style.background = color;
-        rotateHandle.style.borderColor = color;
-      }
 
       // disable this email so no other box can pick it
       // disableEmailInSidebar(email);
