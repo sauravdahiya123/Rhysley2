@@ -17,6 +17,88 @@
     <link href="{% static 'assets/css/app.min.css' %}" rel="stylesheet" type="text/css" />
     <link href="{% static 'assets/css/custom-styles.css' %}" rel="stylesheet" type="text/css" />
     <style>
+        .docx-preview-container {
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    color: #000;
+    line-height: 1.6;
+}
+
+.docx-preview-container p {
+    margin: 8px 0;
+}
+/* DOCX Preview Container Styling */
+.docx-wrapper {
+    background: #1a1f2a;        /* matches your dark UI */
+    padding: 0px !important;
+    height: 100%;
+    overflow-y: auto;
+}
+
+/* Actual document "paper" */
+.docx-page {
+    width: 260px;               /* PDF-like width */
+    max-width: 100%;
+    margin: 0 auto;
+    background: #ffffff;
+    padding: 10px;
+    box-shadow: 0 0 25px rgba(0,0,0,0.4);
+    border-radius: 6px;
+    color: #000;
+}
+.docx-wrapper>section.docx{
+    width: 100% !important;
+    padding: 0px !important;
+}
+.docx p, .docx p span, .docx p a, .docx ul li, .docx ol li{
+    font-size: 11pt!important;
+}
+/* Fix text wrapping */
+.docx-page p,
+.docx-page span,
+.docx-page div {
+    word-wrap: break-word;
+    white-space: normal;
+    line-height: 1.6;
+}
+
+/* Remove excessive docx margin spacing */
+.docx-page section {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+/* DOCX preview container (fixed height like PDF) */
+.docx-preview-thumb {
+    background: #ffffff;
+    width: 100%;
+    height: 260px;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 10px;
+    border-radius: 6px;
+    position: relative;
+}
+
+.docx-first-page {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.docx-preview-hide {
+    display: none !important;
+}
+
+
+/* Inner page style */
+.docx-first-page .docx-page {
+    width: 100% !important;
+    scale: 0.7;             /* Zoom out slightly for preview look */
+    transform-origin: top center;
+    box-shadow: 0 0 10px rgba(0,0,0,0.15);
+}
 .pdf-card {
     width: 260px;
     border-radius: 12px;
