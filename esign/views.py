@@ -59,17 +59,144 @@ def signup_steps(request):
     return render(request, 'esign/signup_steps.html')
 
 @csrf_exempt  # Only if testing with external POST tools like Postman
-def recipient_details(request):
+def recipient_details1(request):
     if request.method == "POST":
-        # Convert POST QueryDict to regular dict
-        data = {key: request.POST.getlist(key) if len(request.POST.getlist(key)) > 1 else request.POST[key]
-                for key in request.POST.keys()}
-        return JsonResponse({"method": "POST", "data": data})
-    else:
-        # GET request: render template as usual
-        return render(request, 'esign/recipient_details.html')
+        data = {}
+
+        # Check if sign order is ON or OFF
+        sign_order_enabled = request.POST.get("signOrderOption") == "on"
+
+        recipients = []
+        index = 1
+
+        while True:
+            name_key = f"name_{index}"
+            email_key = f"email_{index}"
+            action_key = f"signUserActions_{index}"
+
+            if name_key not in request.POST:
+                break
+
+            recipients.append({
+                "order": index,                         # <---- ORDER NUMBER
+                "name": request.POST.get(name_key, ""),
+                "email": request.POST.get(email_key, ""),
+                "action": request.POST.get(action_key, "")
+            })
+            index += 1
+
+        data["method"] = "POST"
+        data["recipients"] = recipients
+        data["signOrderEnabled"] = sign_order_enabled   # <--- tell frontend whether order matters
+
+        # Optional fields — avoid null
+        data["subject"] = request.POST.get("subject", "")
+        data["message"] = request.POST.get("message", "")
+        data["reminder_frequency"] = request.POST.get("reminder_frequency", "")
+        if "file" in request.FILES:
+            uploaded_file = request.FILES["file"]
+            data["file"] = {
+                "name": uploaded_file.name,
+                "size": uploaded_file.size,
+                "content_type": uploaded_file.content_type
+            }
+        else:
+            data["file"] = None
+        
+
+        return JsonResponse(data)
+
+    return render(request, 'esign/recipient_details.html')
     
-    
+@csrf_exempt
+def recipient_details(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid method"}, status=400)
+
+    try:
+        # ---------------------------
+        # Parse JSON payload
+        # ---------------------------
+        # data = json.loads(request.body.decode("utf-8"))
+
+        sign_order_enabled = request.POST.get("signOrderEnabled", False)
+        subject = request.POST.get("subject", "")
+        message = request.POST.get("message", "")
+        reminder_frequency = request.POST.get("reminder_frequency", "")
+        recipients_data = request.POST.get("recipients", [])
+        uploaded_file = request.FILES.get("file")
+        print("recipients_data",request.POST)
+        # ---------------------------
+        # Save file to Document
+        # ---------------------------
+        print("h",uploaded_file)
+        document = None
+        if uploaded_file:
+            document = Document.objects.create(
+                owner=request.user,
+                title=uploaded_file.name,
+                status="pending",
+                file=uploaded_file,  # <--- this saves the actual file
+
+            )
+            if document.pk:  # primary key generate ho gayi hai
+                print("Document saved successfully!")
+            else:
+                print("Document not saved.")
+
+        saved_recipients = []
+        print("recipients_data",recipients_data)
+        index = 1
+        saved_recipients = []
+
+        while True:
+            name = request.POST.get(f"name_{index}")
+            email = request.POST.get(f"email_{index}")
+            action = request.POST.get(f"signUserActions_{index}")
+
+            if not name or not email:
+                break
+            token = secrets.token_hex(32)  # unique token
+
+
+            flow = DocumentSignFlow.objects.create(
+                document=document,
+                recipient_name=name,
+                recipient_email=email,
+                role="signer" if action == "Needs to Sign" else "viewer",
+                order=index if sign_order_enabled else 0,
+                assigned_at=timezone.now(),
+                token=token
+            )
+
+            saved_recipients.append({
+                "order": flow.order,
+                "name": flow.recipient_name,
+                "email": flow.recipient_email,
+                "action": action
+            })
+
+            index += 1
+
+
+        # ---------------------------
+        # Return saved payload
+        # ---------------------------
+        response = {
+            "method": "POST",
+            "signOrderEnabled": sign_order_enabled,
+            "subject": subject,
+            "message": message,
+            "reminder_frequency": reminder_frequency,
+            "recipients": saved_recipients,
+            "file": uploaded_file
+        }
+
+        return JsonResponse(response, safe=False, status=200)
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
 import random, datetime
 
 def forgot_password(request):

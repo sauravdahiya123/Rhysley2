@@ -248,13 +248,415 @@ form.addEventListener('submit', function(e){
 });
 </script>
 
-<div class="row mt-3">
-  <div class="col-sm-12 text-end">
-    <button type="submit" class="btn btn-primary" onclick="validateAndSerializeRecipients(event)">
-    <i class="bi bi-send me-1"></i> Send Signing Link </button>   
+<!-- Document Sign Forms Start -->
+<div class="row justify-content-center mt-4">                        
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+        <div class="table-responsive">
+        <nav class="nav nav-pills nav-justified nav-tabs" id="nav-tab" role="tablist">
+          <button class="nav-link active rounded-bottom-0 py-2" id="nav-document-with-link-tab" data-bs-toggle="tab" data-bs-target="#nav-document-with-link" type="button" role="tab" aria-controls="nav-document-with-link" aria-selected="true">Send Document with Link</button>
+
+          <button class="nav-link rounded-bottom-0 py-2" id="nav-document-with-order-tab" data-bs-toggle="tab" data-bs-target="#nav-document-with-order" type="button" role="tab" aria-controls="nav-document-with-order" aria-selected="false">Send Document with Order</button>
+<!-- 
+          <button class="nav-link rounded-bottom-0 py-2" id="nav-bulk-sign-send-tab" data-bs-toggle="tab" data-bs-target="#nav-bulk-sign-send" type="button" role="tab" aria-controls="nav-bulk-sign-send" aria-selected="false">Bulk Sign Send</button> -->
+        </nav>
+      </div>
+        <div class="tab-content p-3 border bg-light rounded-bottom mb-3 mb-md-0" id="nav-tabContent">
+          <div class="tab-pane fade active show" id="nav-document-with-link" role="tabpanel" aria-labelledby="nav-document-with-link-tab">
+                          <script>
+// Email validation regex
+function isValidEmail(email) {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+}
+
+document.addEventListener("input", function(e) {
+    if (e.target.matches('input[name="email[]"]')) {
+        const input = e.target;
+        const email = input.value.trim();
+
+        // Remove previous feedback if any
+        let feedback = input.nextElementSibling;
+        if (feedback && feedback.classList.contains("email-feedback")) {
+            feedback.remove();
+        }
+
+        // Check validity
+        if (email && !isValidEmail(email)) {
+            // Add feedback
+            const span = document.createElement("span");
+            span.classList.add("text-danger", "email-feedback");
+            span.textContent = "Invalid email!";
+            input.insertAdjacentElement("afterend", span);
+            input.classList.add("is-invalid");
+        } else {
+            input.classList.remove("is-invalid");
+        }
+    }
+});
+</script>
+            <form method="post" 
+            action="{% url 'send_signing_link' document.pk %}{% if request.GET.template_id %}?template_id={{ request.GET.template_id }}{% endif %}" 
+            id="signing-form">
+            {% csrf_token %}
+            <input type="hidden" name="boxes" id="boxes-input"> <!-- JSON boxes -->
+<input type="hidden" id="box-dragged" name="box_dragged" value="">
+
+            
+
+            <!-- Recipient Emails (Add More) -->
+            <div id="recipient-list">
+              <label class="form-label fw-semibold">Email Recipient <span style="color: red">*</span></label>
+              <div class="recipient-item d-flex mb-2">
+                <input type="email" name="email[]" class="form-control me-2" placeholder="user@example.com" required>
+                <!-- <button type="button" class="btn btn-danger btn-sm remove-recipient">&times;</button> -->
+              </div>
+
+
+            </div>
+            <a type="button" class="btn btn-outline-success btn-sm mb-3" id="add-recipient">
+              <i class="bi bi-plus"></i> Add More Recipient
+            </a>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Email Subject <span style="color: red">*</span></label>
+              <input type="text" name="subject" class="form-control" placeholder="Enter email subject" required>
+            </div>
+
+            <!-- CC Emails -->
+            <div class="mb-3">
+              <label class="form-label fw-semibold" hidden="">CC Emails (Optional)</label>
+              <input hidden="" type="text" name="cc_email" class="form-control" placeholder="cc1@example.com, cc2@example.com">
+            </div>
+
+
+<!-- Advance Button -->
+<button type="button" hidden class="btn btn-secondary mb-3" id="advanceBtn">
+  Customize
+</button>
+
+  <div class="col-md-5">
+    <label for="security_token" class="form-label">Security Token</label>
+    <input type="text" class="form-control" id="security_token" name="security_token" >
   </div>
+<!-- Hidden advanced options -->
+<div class="row mb-3" id="advancedOptions" style="display: none;">
+
+  <!-- Role -->
+
+
+  <!-- Reminder Days -->
+  <div class="col-md-4">
+    <label for="reminder_days" class="form-label">Send Reminder After (Days)</label>
+    <select class="form-select" id="reminder_days" name="reminder_days">
+      {% for i in reminder_range %}
+      <option value="{{ i }}">{{ i }} Day{% if i > 1 %}s{% endif %}</option>
+      {% endfor %}
+    </select>
+    <div class="form-text">Reminder if not signed.</div>
+  </div>
+
+  <!-- Security Token -->
+
+
+
+  <div class="col-md-3 d-flex align-items-center">
+    <div class="form-check mb-0">
+      <input type="checkbox" class="form-check-input" id="role" name="role" value="viewer">
+      <label class="form-check-label ms-2" for="role">User Can Only Read</label>
+    </div>
+  </div>
+
 </div>
 
+<script>
+  document.getElementById('advanceBtn').addEventListener('click', function() {
+    const advDiv = document.getElementById('advancedOptions');
+    if (advDiv.style.display === "none") {
+      advDiv.style.display = "flex";
+      this.textContent = "Hide Advanced Options";
+    } else {
+      advDiv.style.display = "none";
+      this.textContent = "Advanced Options";
+    }
+  });
+</script>
+<div id="loaderOverlay" style="
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1050;
+    display: none;  /* Hidden by default */
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    color: white;
+    font-size: 1.2rem;
+">
+    <div class="spinner-border text-light mb-2" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    Sending...
+</div>
+<!-- Submit -->
+<div class="d-flex justify-content-end">
+  <!-- <button type="submit" class="btn btn-primary" onclick="serializeBoxes(event,0)">
+    <i class="bi bi-send me-1"></i> Send Signing Link
+  </button> -->
+
+ <button type="submit" class="btn btn-primary" onclick="validateAndSerializeRecipients(event)">
+    <i class="bi bi-send me-1"></i> Send Signing Link
+</button>
+
+<script>
+// Validate the recipient form before serializing
+function validateAndSerializeRecipients(event) {
+    event.preventDefault(); // stop default submission
+
+       const boxDraggedInput = document.getElementById("box-dragged");
+    
+    if (!boxDraggedInput.value || boxDraggedInput.value == "0") {
+        // e.preventDefault();
+        alert("Please drag at least 1 box on the document.");
+        return;
+    }
+
+
+    const form = document.getElementById('signing-form');
+
+    // 1️⃣ Browser HTML5 validation
+    if (!form.checkValidity()) {
+        form.reportValidity(); // show required messages
+        return false;
+    }
+
+    // 2️⃣ Check all recipient emails are filled
+    const recipientEmails = form.querySelectorAll('input[name="email[]"]');
+    for (let i = 0; i < recipientEmails.length; i++) {
+        if (!recipientEmails[i].value.trim()) {
+            alert("Please fill all recipient email fields before sending!");
+            return false;
+        }
+    }
+
+    // 3️⃣ Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    for (let i = 0; i < recipientEmails.length; i++) {
+        if (!emailRegex.test(recipientEmails[i].value.trim())) {
+            alert("Please enter valid email addresses only!");
+            return false;
+        }
+    }
+
+    // 4️⃣ Ensure hidden boxes input is not empty
+    const boxesInput = document.getElementById('boxes-input');
+    if (!boxesInput.value || boxesInput.value.trim() === '') {
+        boxesInput.value = '{}';
+    }
+
+    // 5️⃣ Everything valid — call your serializeBoxes function
+    if (typeof serializeBoxes === "function") {
+        serializeBoxes(event, 0);
+    }
+}
+</script>
+
+  <!-- <a href="{% url 'open_signing_link' document.pk %}" class="btn btn-secondary flex-grow-1 text-white">
+    <i class="bi bi-box-arrow-up-right"></i> Open Signing Link
+  </a> -->
+</div>
+</form>
+</div>
+<div class="tab-pane fade" id="nav-document-with-order" role="tabpanel" aria-labelledby="nav-document-with-order-tab">
+<form method="post" 
+            action="{% url 'send_signing_link' document.pk %}{% if request.GET.template_id %}?template_id={{ request.GET.template_id }}{% endif %}" 
+            id="signing-form-postion">
+            {% csrf_token %}
+            <input type="hidden" name="boxes" id="boxes-input-postion"> <!-- JSON boxes -->
+<input type="hidden" id="box-dragged-order" name="box_dragged" value="">
+
+  <div id="bulk-list">
+    <div class="bulk-item d-flex mb-2">
+      <input type="text" name="bulk_name[]" class="form-control me-2" placeholder="Full Name" required>
+      <input type="email" name="bulk_email[]" class="form-control me-2" placeholder="user@example.com" required>
+      <input type="number" name="bulk_position[]" class="form-control me-2" placeholder="Position/Order" min="1" readonly value="1" required>
+      <!-- <button type="button" class="btn btn-danger btn-sm remove-bulk">&times;</button> -->
+    </div>
+  </div>
+ <a type="button" class="btn btn-outline-success btn-sm" onclick="addBulkItem()">
+  <i class="bi bi-plus"></i> Add More
+</a>
+<script>
+const bulkContainer = document.getElementById("bulk-list");
+
+// Function to update bulk positions
+function updateBulkPositions() {
+    const items = bulkContainer.querySelectorAll(".bulk-item");
+    items.forEach((item, index) => {
+        const input = item.querySelector("input[name='bulk_position[]']");
+        if (input) {
+            input.value = index + 1; // Recalculate position
+        }
+    });
+}
+
+// Function to add a bulk row
+function addBulkItem() {
+    const div = document.createElement("div");
+    div.classList.add("bulk-item", "d-flex", "mb-2");
+    div.innerHTML = `
+        <input type="text" name="bulk_name[]" class="form-control me-2" placeholder="Full Name" required>
+        <input type="email" name="bulk_email[]" class="form-control me-2" placeholder="user@example.com" required>
+        <input type="number" name="bulk_position[]" class="form-control me-2" readonly placeholder="Position/Order" min="1" required>
+        <button type="button" class="btn btn-danger btn-sm remove-bulk">&times;</button>
+    `;
+    bulkContainer.appendChild(div);
+    updateBulkPositions(); // Update positions after adding
+}
+
+// Remove Bulk Row
+document.addEventListener("click", function(e) {
+    if (e.target.classList.contains("remove-bulk")) {
+        e.target.closest(".bulk-item").remove(); // Remove row
+        updateBulkPositions(); // Recalculate positions
+    }
+});
+</script>
+
+
+<!-- 
+  <div class="d-flex justify-content-end mt-3">
+    <button type="submit" class="btn btn-primary" onclick="serializeBoxes(event,3)">
+      <i class="bi bi-send me-1"></i> Send Order Signing Link
+    </button>
+     
+  </div>
+
+ -->
+
+<div class="d-flex justify-content-end mt-3">
+    <button type="button" class="btn btn-primary" onclick="validateAndSerialize(event)">
+        <i class="bi bi-send me-1"></i> Send Order Signing Link
+    </button>
+</div>
+<script>
+// Function to validate the form before serializing
+function validateAndSerialize(event) {
+    event.preventDefault(); // Stop immediate submission
+  const boxDraggedInput = document.getElementById("box-dragged-order");
+    
+    if (!boxDraggedInput.value || boxDraggedInput.value == "0") {
+        // e.preventDefault();
+        alert("Please drag at least 1 box on the document.");
+        return;
+    }
+
+    const form = document.getElementById('signing-form-postion');
+
+    // 1️⃣ Browser HTML5 validation
+    if (!form.checkValidity()) {
+        form.reportValidity(); // Show required field errors
+        return false; // Stop further processing
+    }
+
+    // 2️⃣ Check that all bulk names and emails are filled
+    const bulkNames = form.querySelectorAll('input[name="bulk_name[]"]');
+    const bulkEmails = form.querySelectorAll('input[name="bulk_email[]"]');
+
+    for (let i = 0; i < bulkNames.length; i++) {
+        if (!bulkNames[i].value.trim() || !bulkEmails[i].value.trim()) {
+            alert("Please fill all bulk names and emails before sending!");
+            return false;
+        }
+    }
+
+    // 3️⃣ Ensure hidden boxes input is never empty
+    const boxesInput = document.getElementById('boxes-input-postion');
+    if (!boxesInput.value || boxesInput.value.trim() === '') {
+        boxesInput.value = '{}';
+    }
+
+    // 4️⃣ Optional: check email format using regex
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    for (let i = 0; i < bulkEmails.length; i++) {
+        if (!emailRegex.test(bulkEmails[i].value.trim())) {
+            alert("Please enter valid email addresses only!");
+            return false;
+        }
+    }
+
+    // 5️⃣ Everything is valid — now call the original serializeBoxes
+    serializeBoxes(event, 3);
+}
+</script>
+
+
+  </form>
+</div>
+<div class="tab-pane fade" id="nav-bulk-sign-send" role="tabpanel" aria-labelledby="nav-bulk-sign-send-tab">
+  <form method="post" action="{% url 'send_signing_link_bulk' document.pk %}" id="bulk-email-form">
+    {% csrf_token %}
+    <input type="hidden" name="boxes" id="boxes-input-bulk"> <!-- JSON boxes -->
+
+    <!-- Email Subject -->
+    <div class="mb-3">
+      <label class="form-label fw-semibold">Email Subject</label>
+      <input type="text" name="subject" class="form-control" placeholder="Enter email subject" required>
+    </div>
+
+    <!-- CSV Upload -->
+    <div class="mb-3">
+      <label for="csv-file" class="form-label">Upload CSV for emails</label>
+      <input type="file" id="csv-file" class="form-control" accept=".csv">
+       <button type="button" class="btn btn-outline-secondary mt-2" id="download-sample-csv">
+        <i class="bi bi-download me-1"></i> Download Sample CSV
+      </button>
+    </div><script>
+    document.getElementById('download-sample-csv').addEventListener('click', () => {
+      // Email comes first now
+      const sampleData = "john@example.com\njane@example.com";
+      const blob = new Blob([sampleData], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'sample_bulk_emails.csv';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    });
+    </script>
+
+
+    <!-- Preview Emails -->
+    <div id="recipient-preview" class="mb-2"></div>
+    <p id="email-count" class="text-muted mb-3"></p>
+
+    <!-- Hidden input to store all CSV emails -->
+    <input type="hidden" name="csv_emails" id="csv_emails">
+
+    <!-- Submit -->
+    <div class="d-flex justify-content-end">
+      <button type="submit" class="btn btn-primary"  >
+        <i class="bi bi-send me-1"></i> Send Bulk Signing Link
+      </button>
+      <!-- <a href="{% url 'open_signing_link' document.pk %}" class="btn btn-secondary flex-grow-1 text-white">
+        <i class="bi bi-box-arrow-up-right"></i> Open Signing Link
+      </a> -->
+    </div>
+  </form>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Document Sign Forms End -->
 </div>
 
 
