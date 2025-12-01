@@ -40,17 +40,37 @@
     <div class="mb-4 d-flex align-items-center gap-4">
 
         <div class="form-check">
-            <input class="form-check-input"  value="in_order" type="radio" name="signOrderOption" id="radioOrder" checked>
+            <input class="form-check-input" onclick="s(0)"  value="in_order" type="radio" name="signOrderOption" id="radioOrder" checked>
             <label class="form-check-label" for="radioOrder">In Order</label>
         </div>
 
         <div class="form-check">
-            <input class="form-check-input" value="order" type="radio" name="signOrderOption" id="radioInOrder">
+            <input class="form-check-input" onclick="s(1)" value="order" type="radio" name="signOrderOption" id="radioInOrder">
             <label class="form-check-label" for="radioInOrder" >Order</label>
         </div>
 
     </div>
 
+
+    <script>
+        function s(x){
+            if(x == 1){
+            const selects = document.querySelectorAll("[id^='signUserActions_']");
+            selects.forEach(sel => {
+                sel.setAttribute("disabled", true); // disable
+                // sel.removeAttribute("disabled"); // enable
+            });
+
+                        }else{
+            const selects = document.querySelectorAll("[id^='signUserActions_']");
+            selects.forEach(sel => {
+                // sel.setAttribute("disabled", false); // disable
+                sel.removeAttribute("disabled"); // enable
+            });
+
+            }
+        }
+    </script>
     <!-- RECIPIENTS CONTAINER -->
     <div id="recipientsContainer">
 
@@ -78,11 +98,47 @@
                   <div class="mb-0">
                       <label class="form-label" for="email_1">Email <span class="text-danger">*</span></label>
                       <input type="email" class="form-control" id="email_1" name="email_1" placeholder="Enter email" required>
+                                <small id="emailError_1" class="text-danger mt-1 d-block"></small>
+                  
                   </div>
+
+                  <script>
+                    // Email validation regex
+const emailPattern2 = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+// Function to attach keyup validation to your specific email input
+function attachKeyupValidationForEmail1() {
+    const emailInput = document.getElementById("email_1");
+    const errorElem = document.getElementById("emailError_1");
+
+    if (!emailInput || !errorElem) return;
+
+    emailInput.addEventListener("keyup", () => {
+        const value = emailInput.value.trim();
+
+        if (value === "") {
+            errorElem.textContent = ""; // clear error if empty
+            return;
+        }
+
+        if (!emailPattern2.test(value)) {
+            errorElem.textContent = "Please enter a valid email";
+        } else {
+            errorElem.textContent = ""; // valid email
+        }
+
+        
+    });
+}
+
+// Call the function to activate validation
+attachKeyupValidationForEmail1();
+
+                  </script>
                 </div>
                 <div class="col-md-2 offset-md-1">
                   <div class="d-flex gap-3 mb-4 w-100">
-                      <select class="form-select" id="signUserActions" name="signUserActions_1" aria-label="Sign User Actions" required>
+                      <select class="form-select" id="signUserActions_1" name="signUserActions_1" aria-label="Sign User Actions" required>
                         <option value="Needs to Sign">Needs to Sign</option>
                         <option value="View Only">View Only</option>
                         <option value="Receives a Copy (CC)">Receives a Copy (CC)</option>
@@ -167,10 +223,6 @@
 </div>
 
 </form>
-
-
-<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/docx-preview/dist/docx-preview.min.js"></script>
 
 <!-- PDF.js ES5 build (REQUIRED) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.mjs" type="module"></script>
@@ -284,170 +336,55 @@ document.getElementById("pdfInput").addEventListener("change", function(e) {
         e.preventDefault();
         dropzone.style.background = "";
         pdfInput.files = e.dataTransfer.files;
-        handleFile(pdfInput.files[0]);
+        handlePDF(pdfInput.files[0]);
     });
 
     /* FILE SELECTED */
     pdfInput.addEventListener("change", () => {
         if (pdfInput.files.length > 0) {
-            handleFile(pdfInput.files[0]);
+            handlePDF(pdfInput.files[0]);
         }
     });
 
-    function handleFile(file) {
+    function handlePDF(file) {
+        if (file.type !== "application/pdf") {
+            alert("Please upload a PDF file.");
+            return;
+        }   
 
-    if (!file) return;
 
-    const fileType = file.type;
-    const fileName = file.name.toLowerCase();
+        const maxSize = 100 * 1024 * 1024; 
+            if (file.size > maxSize) {
+                alert("File size should not exceed 100 MB.");
+                return;
+            }
 
-    // Show loader
-    loader.style.display = "block";
-    containerBox.classList.add("show-preview");
-    previewArea.innerHTML = "";
-    previewArea.appendChild(loader);
 
-    /* ========= PDF ========= */
-    if (fileType === "application/pdf") {
-        previewPDF(file);
-        return;
-    }
+        // Show loader
+        loader.style.display = "block";
 
-    /* ========= Images (JPG / PNG) ========= */
-    if (fileType.startsWith("image/")) {
-        previewImage(file);
-        return;
-    }
+        // Smooth transition
+        containerBox.classList.add("show-preview");
 
-    /* ========= DOCX ========= */
-    if (fileName.endsWith(".docx")) {
-        previewDOCX(file);
-        return;
-    }
+        const fileURL = URL.createObjectURL(file);
 
-    alert("Only PDF, JPG, PNG, and DOCX files are supported.");
-    loader.style.display = "none";
-}
+        // Create iframe
+        const iframe = document.createElement("iframe");
+        iframe.src = fileURL;
 
-function previewPDF(file) {
-    const fileURL = URL.createObjectURL(file);
-
-    const iframe = document.createElement("iframe");
-    iframe.src = fileURL;
-    iframe.style.display = "none";
-
-    previewArea.innerHTML = "";
-    previewArea.appendChild(loader);
-    previewArea.appendChild(iframe);
-
-    iframe.onload = () => {
-        loader.style.display = "none";
-        iframe.style.display = "block";
-    };
-}
-
-function previewImage(file) {
-    const img = document.createElement("img");
-
-    img.style.maxWidth = "100%";
-    img.style.borderRadius = "6px";
-    img.style.boxShadow = "0 0 10px rgba(0,0,0,0.2)";
-
-    img.onload = () => {
-        loader.style.display = "none";
-    };
-
-    img.src = URL.createObjectURL(file);
-
-    previewArea.innerHTML = "";
-    previewArea.appendChild(img);
-}
-
-function previewDOCX(file) {
-
-    const reader = new FileReader();
-
-    reader.onload = async function (e) {
+        // Hide iframe initially until fully loaded
+        iframe.style.display = "none";
 
         previewArea.innerHTML = "";
+        previewArea.appendChild(loader);
+        previewArea.appendChild(iframe);
 
-        const card = document.createElement("div");
-        card.className = "preview-card";
-
-        const thumb = document.createElement("div");
-        thumb.className = "docx-preview-thumb";
-
-        const pageContainer = document.createElement("div");
-        pageContainer.className = "docx-first-page";
-
-        thumb.appendChild(pageContainer);
-
-        const info = document.createElement("div");
-        info.style.padding = "16px";
-
-        card.appendChild(thumb);
-        card.appendChild(info);
-
-        previewArea.appendChild(card);
-
-        try {
-            await docx.renderAsync(
-                e.target.result,
-                pageContainer,
-                null,
-                {
-                    inWrapper: true,
-                    breakPages: true
-                }
-            );
-
-            const pages = pageContainer.querySelectorAll(".docx-page");
-            const totalPages = pages.length || 1;
-
-            pages.forEach((page, i) => {
-                if (i !== 0) {
-                    page.classList.add("docx-preview-hide");
-                }
-            });
-
-            const firstPage = pages[0];
-
-            // ✅ WAIT for layout before measuring
-            requestAnimationFrame(() => {
-
-                const containerWidth = thumb.getBoundingClientRect().width;
-                const pageWidth = firstPage.getBoundingClientRect().width;
-
-                if (!containerWidth || !pageWidth) {
-                    console.warn("DOCX scaling skipped (invalid width)", {containerWidth, pageWidth});
-                    return;
-                }
-
-                let scale = containerWidth / pageWidth;
-
-                // Keep scale reasonable
-                if (scale > 1) scale = 1;
-                if (scale <= 0) scale = 0.6;
-
-                firstPage.style.transform = `scale(${scale})`;
-                firstPage.style.transformOrigin = "top center";
-
-            });
-
-            info.innerHTML = `
-                <strong>${file.name}</strong>
-                <div>${totalPages || 1} page${totalPages !== 1 ? "s" : ""}</div>
-            `;
-
-        } catch (err) {
-            console.error("DOCX render error:", err);
-            previewArea.innerHTML = `<div style="color:red;padding:10px">DOCX Preview Failed</div>`;
-        }
-    };
-
-    reader.readAsArrayBuffer(file);
-}
-
+        // When PDF preview has fully loaded
+        iframe.onload = function () {
+            loader.style.display = "none";
+            iframe.style.display = "block";
+        };
+    }
 </script>
 <!-- ================= CUSTOM JS ================= -->
 <script>
@@ -465,6 +402,7 @@ const radioInOrder = document.getElementById("radioInOrder");
 function updateOrderNumbers() {
     const show = radioInOrder.checked;
     const boxes = document.querySelectorAll("[data-recipient]");
+    // document.getElementById("signUserActions").setAttribute("disabled", true);
 
     boxes.forEach((box, i) => {
         const num = box.querySelector(".orderNumber");
@@ -474,6 +412,7 @@ function updateOrderNumbers() {
         num.style.display = show ? "flex" : "none";
         wrap.style.marginLeft = show ? "80px" : "0";
     });
+
 }
 
 // ----------------------
@@ -490,6 +429,64 @@ function updateDeleteButtonsVisibility() {
         }
     });
 }
+
+
+const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+// Function to validate a single email input
+function validateEmailInput(inp) {
+    const errorElem = inp.parentElement.querySelector("small");
+    const value = inp.value.trim();
+
+    if (value === "") {
+        errorElem.textContent = "";
+        return;
+    }
+
+    if (!emailPattern.test(value)) {
+        errorElem.textContent = "Please enter a valid email";
+    } else {
+        errorElem.textContent = "";
+    }
+}
+
+// Attach validation on keyup for an input
+// Regex for email validation
+const emailPattern1 = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+// Function to attach keyup validation on an email input
+function attachKeyupValidation(inp) {
+    inp.addEventListener("keyup", () => {
+        const value = inp.value.trim();
+        const errorElem = inp.parentElement.querySelector("small"); // associated error <small>
+
+        if (!errorElem) return; // if no <small>, exit
+
+        if (value === "") {
+            errorElem.textContent = ""; // clear if empty
+            return;
+        }
+
+        if (!emailPattern1.test(value)) {
+            errorElem.textContent = "Please enter a valid email";
+        } else {
+            errorElem.textContent = ""; // valid email
+        }
+
+
+         const allEmails = Array.from(document.querySelectorAll("input[type='email']"))
+            .filter(i => i !== inp)
+            .map(i => i.value.trim());
+
+        if (allEmails.includes(value)) {
+            errorElem.textContent = "This email is already used";
+        }
+
+        
+    });
+}
+
+
 
 // ----------------------
 // Add Recipient (incremental IDs including the select #signUserActions)
@@ -514,7 +511,16 @@ addRecipientBtn.addEventListener("click", () => {
         } else if (inp.type === "email") {
             inp.id = `email_${nextIndex}`;
             inp.name = `email_${nextIndex}`; // <-- dynamic name attribute
+
+               const errorElem = inp.parentElement.querySelector("small");
+        if (errorElem) {
+            errorElem.id = `emailError_${nextIndex}`;
+            errorElem.textContent = ""; // clear previous error
         }
+
+        }
+        attachKeyupValidation(inp);
+
     });
 
     // --- Update labels inside clone so they point to new ids ---

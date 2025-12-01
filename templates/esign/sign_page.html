@@ -699,9 +699,15 @@ document.getElementById("clearCanvas").addEventListener("click", () => {
 });
 
 /* ---------------- UPLOAD SIGNATURE ---------------- */
-document.getElementById("uploadInput").addEventListener("change", function(){
+document.getElementById("uploadInput").addEventListener("change", function() {
     const file = this.files[0];
-    document.getElementById("uploadPreview").src = URL.createObjectURL(file);
+    if (file && file.type.startsWith("image/")) {  // sirf images allow
+        document.getElementById("uploadPreview").src = URL.createObjectURL(file);
+    } else {
+        alert("Please select an image file only.");
+        this.value = ""; // input clear kar do
+        document.getElementById("uploadPreview").src = ""; // preview clear
+    }
 });
 
 /* ---------------- Adopt and Sign ---------------- */
@@ -1618,6 +1624,9 @@ function initNextRequiredButton() {
 function scrollToNextRequired() {
     const container = document.getElementById("pdf-container"); // scrollable container
     const boxes = Array.from(container.querySelectorAll(".sig-box-db"));
+
+
+
     // const boxes = Array.from(container.querySelectorAll(".sig-box-db[data-required='true']"));
 
     if (!boxes.length) return;
@@ -1626,7 +1635,16 @@ function scrollToNextRequired() {
     boxes.forEach(box => {
         box.style.borderColor = box.dataset.originalBorder || "#000"; // restore original
         box.style.opacity = box.dataset.originalOpacity || "1";
-        if (box.dataset.originalText) box.innerText = box.dataset.originalText;
+        
+        // if (box.dataset.originalText) box.innerText = box.dataset.originalText;
+        
+        const hasBgImage = box.style.backgroundImage && box.style.backgroundImage !== "none";
+    
+        // Only restore text if there is no background image
+        if (!hasBgImage && box.dataset.originalText) {
+            box.innerText = box.dataset.originalText;
+        }
+    
     });
 
     let startIndex = currentIndex;
@@ -1636,31 +1654,36 @@ function scrollToNextRequired() {
         const box = boxes[currentIndex];
         const type = box.dataset.boxType; // skip date boxes
         const isFilled = box.dataset.sigId || (box.style.backgroundImage && box.style.backgroundImage !== "none");
+            const hasBgImage = box.style.backgroundImage && box.style.backgroundImage !== "none";
 
         if (type !== "date" && !isFilled) {
             // Save original styles if not saved
             if (!box.dataset.originalBorder) box.dataset.originalBorder = box.style.borderColor;
             if (!box.dataset.originalOpacity) box.dataset.originalOpacity = box.style.opacity;
             // if (!box.dataset.originalText) box.dataset.originalText = box.innerText;
+             if (!hasBgImage && !box.dataset.originalText) {
+            box.dataset.originalText = box.innerText;
+        }
 
             // Highlight only the current box
             // box.style.borderColor = "red";
              const isRequired = box.dataset.required === "true";
 
-    // Required → red border
-    if (isRequired) {
-        box.style.borderColor = "red";
-        box.style.opacity = "1";
-                    box.innerText = "Required";
+            // Required → red border
+            if (isRequired) {
+                box.style.borderColor = "red";
+                box.style.opacity = "1";
+                            box.innerText = "Required";
+                            //   if (!box.dataset.originalText) box.dataset.originalText = box.innerText;
 
-    } 
-    // Not required → grey border
-    else {
-        box.style.borderColor = "blue";
-        box.style.opacity = "0.7";
-                    box.innerText = "Optional";
+            } 
+            // Not required → grey border
+            else {
+                box.style.borderColor = "blue";
+                box.style.opacity = "0.7";
+                            box.innerText = "Optional";
 
-    }
+            }
             box.style.opacity = "0.5";
 
             // Scroll the container to the box
