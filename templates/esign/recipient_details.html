@@ -168,6 +168,10 @@
 
 </form>
 
+
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx-preview/dist/docx-preview.min.js"></script>
+
 <!-- PDF.js ES5 build (REQUIRED) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.mjs" type="module"></script>
 
@@ -280,47 +284,170 @@ document.getElementById("pdfInput").addEventListener("change", function(e) {
         e.preventDefault();
         dropzone.style.background = "";
         pdfInput.files = e.dataTransfer.files;
-        handlePDF(pdfInput.files[0]);
+        handleFile(pdfInput.files[0]);
     });
 
     /* FILE SELECTED */
     pdfInput.addEventListener("change", () => {
         if (pdfInput.files.length > 0) {
-            handlePDF(pdfInput.files[0]);
+            handleFile(pdfInput.files[0]);
         }
     });
 
-    function handlePDF(file) {
-        if (file.type !== "application/pdf") {
-            alert("Please upload a PDF file.");
-            return;
-        }
+    function handleFile(file) {
 
-        // Show loader
-        loader.style.display = "block";
+    if (!file) return;
 
-        // Smooth transition
-        containerBox.classList.add("show-preview");
+    const fileType = file.type;
+    const fileName = file.name.toLowerCase();
 
-        const fileURL = URL.createObjectURL(file);
+    // Show loader
+    loader.style.display = "block";
+    containerBox.classList.add("show-preview");
+    previewArea.innerHTML = "";
+    previewArea.appendChild(loader);
 
-        // Create iframe
-        const iframe = document.createElement("iframe");
-        iframe.src = fileURL;
+    /* ========= PDF ========= */
+    if (fileType === "application/pdf") {
+        previewPDF(file);
+        return;
+    }
 
-        // Hide iframe initially until fully loaded
-        iframe.style.display = "none";
+    /* ========= Images (JPG / PNG) ========= */
+    if (fileType.startsWith("image/")) {
+        previewImage(file);
+        return;
+    }
+
+    /* ========= DOCX ========= */
+    if (fileName.endsWith(".docx")) {
+        previewDOCX(file);
+        return;
+    }
+
+    alert("Only PDF, JPG, PNG, and DOCX files are supported.");
+    loader.style.display = "none";
+}
+
+function previewPDF(file) {
+    const fileURL = URL.createObjectURL(file);
+
+    const iframe = document.createElement("iframe");
+    iframe.src = fileURL;
+    iframe.style.display = "none";
+
+    previewArea.innerHTML = "";
+    previewArea.appendChild(loader);
+    previewArea.appendChild(iframe);
+
+    iframe.onload = () => {
+        loader.style.display = "none";
+        iframe.style.display = "block";
+    };
+}
+
+function previewImage(file) {
+    const img = document.createElement("img");
+
+    img.style.maxWidth = "100%";
+    img.style.borderRadius = "6px";
+    img.style.boxShadow = "0 0 10px rgba(0,0,0,0.2)";
+
+    img.onload = () => {
+        loader.style.display = "none";
+    };
+
+    img.src = URL.createObjectURL(file);
+
+    previewArea.innerHTML = "";
+    previewArea.appendChild(img);
+}
+
+function previewDOCX(file) {
+
+    const reader = new FileReader();
+
+    reader.onload = async function (e) {
 
         previewArea.innerHTML = "";
-        previewArea.appendChild(loader);
-        previewArea.appendChild(iframe);
 
-        // When PDF preview has fully loaded
-        iframe.onload = function () {
-            loader.style.display = "none";
-            iframe.style.display = "block";
-        };
-    }
+        const card = document.createElement("div");
+        card.className = "preview-card";
+
+        const thumb = document.createElement("div");
+        thumb.className = "docx-preview-thumb";
+
+        const pageContainer = document.createElement("div");
+        pageContainer.className = "docx-first-page";
+
+        thumb.appendChild(pageContainer);
+
+        const info = document.createElement("div");
+        info.style.padding = "16px";
+
+        card.appendChild(thumb);
+        card.appendChild(info);
+
+        previewArea.appendChild(card);
+
+        try {
+            await docx.renderAsync(
+                e.target.result,
+                pageContainer,
+                null,
+                {
+                    inWrapper: true,
+                    breakPages: true
+                }
+            );
+
+            const pages = pageContainer.querySelectorAll(".docx-page");
+            const totalPages = pages.length || 1;
+
+            pages.forEach((page, i) => {
+                if (i !== 0) {
+                    page.classList.add("docx-preview-hide");
+                }
+            });
+
+            const firstPage = pages[0];
+
+            // ✅ WAIT for layout before measuring
+            requestAnimationFrame(() => {
+
+                const containerWidth = thumb.getBoundingClientRect().width;
+                const pageWidth = firstPage.getBoundingClientRect().width;
+
+                if (!containerWidth || !pageWidth) {
+                    console.warn("DOCX scaling skipped (invalid width)", {containerWidth, pageWidth});
+                    return;
+                }
+
+                let scale = containerWidth / pageWidth;
+
+                // Keep scale reasonable
+                if (scale > 1) scale = 1;
+                if (scale <= 0) scale = 0.6;
+
+                firstPage.style.transform = `scale(${scale})`;
+                firstPage.style.transformOrigin = "top center";
+
+            });
+
+            info.innerHTML = `
+                <strong>${file.name}</strong>
+                <div>${totalPages || 1} page${totalPages !== 1 ? "s" : ""}</div>
+            `;
+
+        } catch (err) {
+            console.error("DOCX render error:", err);
+            previewArea.innerHTML = `<div style="color:red;padding:10px">DOCX Preview Failed</div>`;
+        }
+    };
+
+    reader.readAsArrayBuffer(file);
+}
+
 </script>
 <!-- ================= CUSTOM JS ================= -->
 <script>
