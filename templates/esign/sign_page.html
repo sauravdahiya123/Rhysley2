@@ -482,6 +482,7 @@ document.addEventListener("DOMContentLoaded", function(){
 </style>
 <script>
 const signatureBoxes = {{ signature_boxes|safe }};
+console.log("signatureBoxes",signatureBoxes);
 let selectedSignature = null;
 
 </script>
@@ -1058,7 +1059,6 @@ pdfjsLib.getDocument(pdfUrl).promise.then(pdf => {
             canvasContext: canvas.getContext("2d"),
             viewport: viewport
         });
-        
       signatureBoxes.forEach(box => {
         if (box.page === pageNum) {
           const div = document.createElement("div");
@@ -1089,7 +1089,7 @@ pdfjsLib.getDocument(pdfUrl).promise.then(pdf => {
           div.style.alignItems = "center";
           div.style.justifyContent = "center";
           div.setAttribute("data-box-id", box.id);
-          div.setAttribute("data-required", "true");
+          div.setAttribute("data-required",  box.required);
 
      if (box.type === "signature") {
     div.innerText = "Signature";
@@ -1588,7 +1588,7 @@ let currentIndex = 0;
 
 function initNextRequiredButton() {
     const nextBtn = document.createElement("button");
-    nextBtn.innerText = "Next Required";
+    nextBtn.innerText = "Next";
     nextBtn.id = "next-required-btn";  // ✅ ID added
 
     // Styling
@@ -1617,7 +1617,8 @@ function initNextRequiredButton() {
 
 function scrollToNextRequired() {
     const container = document.getElementById("pdf-container"); // scrollable container
-    const boxes = Array.from(container.querySelectorAll(".sig-box-db[data-required='true']"));
+    const boxes = Array.from(container.querySelectorAll(".sig-box-db"));
+    // const boxes = Array.from(container.querySelectorAll(".sig-box-db[data-required='true']"));
 
     if (!boxes.length) return;
 
@@ -1640,12 +1641,27 @@ function scrollToNextRequired() {
             // Save original styles if not saved
             if (!box.dataset.originalBorder) box.dataset.originalBorder = box.style.borderColor;
             if (!box.dataset.originalOpacity) box.dataset.originalOpacity = box.style.opacity;
-            if (!box.dataset.originalText) box.dataset.originalText = box.innerText;
+            // if (!box.dataset.originalText) box.dataset.originalText = box.innerText;
 
             // Highlight only the current box
-            box.style.borderColor = "red";
+            // box.style.borderColor = "red";
+             const isRequired = box.dataset.required === "true";
+
+    // Required → red border
+    if (isRequired) {
+        box.style.borderColor = "red";
+        box.style.opacity = "1";
+                    box.innerText = "Required";
+
+    } 
+    // Not required → grey border
+    else {
+        box.style.borderColor = "blue";
+        box.style.opacity = "0.7";
+                    box.innerText = "Optional";
+
+    }
             box.style.opacity = "0.5";
-            box.innerText = "Required";
 
             // Scroll the container to the box
             box.scrollIntoView({ behavior: "smooth", block: "center" });

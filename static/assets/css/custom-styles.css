@@ -154,6 +154,7 @@ canvas { display: block; width: 100%; height: auto; }
     transform: translateX(-50%);
     cursor: grab;
     border-radius: 50%;
+    transition: background 0.2s ease, border 0.2s ease;
 }
 
 /* Info Cards */

@@ -78,7 +78,7 @@ def recipient_details1(request):
                 break
 
             recipients.append({
-                "order": index,                         # <---- ORDER NUMBER
+                "order": index if sign_order_enabled else 1,  # <-- Conditional order
                 "name": request.POST.get(name_key, ""),
                 "email": request.POST.get(email_key, ""),
                 "action": request.POST.get(action_key, "")
@@ -107,11 +107,12 @@ def recipient_details1(request):
         return JsonResponse(data)
 
     return render(request, 'esign/recipient_details.html')
-    
+
 @csrf_exempt
+@login_required
 def recipient_details(request):
     if request.method != "POST":
-        return JsonResponse({"error": "Invalid method"}, status=400)
+        return render(request, 'esign/recipient_details.html')
 
     try:
         # ---------------------------
@@ -119,7 +120,8 @@ def recipient_details(request):
         # ---------------------------
         # data = json.loads(request.body.decode("utf-8"))
 
-        sign_order_enabled = request.POST.get("signOrderEnabled", False)
+        sign_order_enabled = request.POST.get("signOrderOption", False)
+        print("sign_order_enabled",sign_order_enabled)
         subject = request.POST.get("subject", "")
         message = request.POST.get("message", "")
         reminder_frequency = request.POST.get("reminder_frequency", "")
@@ -149,36 +151,57 @@ def recipient_details(request):
         index = 1
         saved_recipients = []
 
+
         while True:
             name = request.POST.get(f"name_{index}")
             email = request.POST.get(f"email_{index}")
             action = request.POST.get(f"signUserActions_{index}")
-
+            print("signUserActionsssssssssss",action)
             if not name or not email:
                 break
             token = secrets.token_hex(32)  # unique token
+
+            if sign_order_enabled == "in_order":
+                # sabka order same
+                order_value = 1
+            else:
+                # increment order (1,2,3,4…)
+                order_value = index
+
+            if action == "Needs to Sign":
+                role = "signer"
+            elif action == "Receives a Copy (CC)":
+                role = "cc"
+            else:
+                role = "viewer"  # default
+
+            # return JsonResponse({'ok': role, 'error': 'POST only'}, status=405)
 
 
             flow = DocumentSignFlow.objects.create(
                 document=document,
                 recipient_name=name,
                 recipient_email=email,
-                role="signer" if action == "Needs to Sign" else "viewer",
-                order=index if sign_order_enabled else 0,
+                role=role,
+                order=order_value,
                 assigned_at=timezone.now(),
                 token=token
             )
+            expires = timezone.now() + timedelta(days=7)
+            SigningToken.objects.create(document=document, token=token, expires_at=expires)
+
 
             saved_recipients.append({
                 "order": flow.order,
                 "name": flow.recipient_name,
                 "email": flow.recipient_email,
-                "action": action
+                "action": flow.role
             })
 
             index += 1
+        # return JsonResponse({'ok': action, 'error': 'POST only'}, status=405)
 
-
+        print("saved_recipients",saved_recipients)
         # ---------------------------
         # Return saved payload
         # ---------------------------
@@ -192,10 +215,32 @@ def recipient_details(request):
             "file": uploaded_file
         }
 
-        return JsonResponse(response, safe=False, status=200)
+        doc = get_object_or_404(Document, pk=document.pk)
+
+        flows = DocumentSignFlow.objects.filter(document_id=document.pk,role='signer').order_by('order')
+
+        # Normal document detail if document exists
+        # placements = SignaturePlacement.objects.filter(document=doc)
+        reminder_range = range(1, 31)
+        users = get_user_model().objects.all().order_by('id')
+        emails = list(flows.values_list("recipient_email", flat=True))
+        print("emails",emails)
+        return render(request, 'esign/document_detail.html', {
+            'document': doc,
+            'flows': flows,              # <-- yaha add karo
+                'emails': emails,   # <-- ADD THIS
+
+            'signatures': [],
+            'placements': [],
+            'users': users,
+            'reminder_range': reminder_range,
+        })
+
+        # return JsonResponse(response, safe=False, status=200)
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+    
 
 import random, datetime
 
@@ -929,6 +974,8 @@ def document_detail(request, pk):
   
     doc = get_object_or_404(Document, pk=pk)
 
+    flows = DocumentSignFlow.objects.filter(document_id=pk,role='signer').order_by('order')
+    emails = list(flows.values_list("recipient_email", flat=True))
 
     # Normal document detail if document exists
     # placements = SignaturePlacement.objects.filter(document=doc)
@@ -937,11 +984,16 @@ def document_detail(request, pk):
 
     return render(request, 'esign/document_detail.html', {
         'document': doc,
+         'flows': flows,              # <-- yaha add karo
+                'emails': emails,   # <-- ADD THIS
+
         'signatures': [],
         'placements': [],
         'users': users,
         'reminder_range': reminder_range,
     })
+
+
 
 @login_required
 def open_signing_link(request, pk):
@@ -968,9 +1020,149 @@ def rgb_to_hex(rgb_str):
     return rgb_str  # already hex
 
 
+def merge_boxes_to_pdf(document, boxes):
+    """
+    Merge signature boxes onto the PDF and save merged PDF.
+    :param document: Document instance
+    :param boxes: list of boxes dict (percentage coordinates)
+    :return: merged file path
+    """
+
+    output = PdfWriter()
+    reader = PdfReader(document.file.path)
+
+    for i, page in enumerate(reader.pages, start=1):
+        page_width = float(page.mediabox.width)
+        page_height = float(page.mediabox.height)
+
+        packet = io.BytesIO()
+        can = canvas.Canvas(packet, pagesize=(page_width, page_height))
+
+        for box in boxes:
+            if box['page'] == i:
+                width_pt = float(box['width']) / 100 * page_width
+                height_pt = float(box['height']) / 100 * page_height
+                x_pt = float(box['x']) / 100 * page_width
+                y_pt = page_height - (float(box['y']) / 100 * page_height) - height_pt
+
+                can.setStrokeColorRGB(0, 0, 0)
+                can.setLineWidth(2)
+                can.rect(x_pt, y_pt, width_pt, height_pt)
+                can.drawString(x_pt + 5, y_pt + height_pt / 2, box['type'].capitalize())
+
+        can.save()
+        packet.seek(0)
+
+        overlay = PdfReader(packet)
+        if len(overlay.pages) > 0:
+            page.merge_page(overlay.pages[0])
+
+        output.add_page(page)
+
+    merged_filename = f'merged_{document.pk}.pdf'
+    merged_path = f'media/{merged_filename}'
+    with open(merged_path, 'wb') as f:
+        output.write(f)
+
+    return merged_path
+
+
 import io
 @login_required
 def send_signing_link(request, pk):
+    """
+    Save boxes + call PDF merge function
+    """
+
+    document = get_object_or_404(Document, pk=pk)
+
+    raw_data = request.POST.get("boxes", "")
+    try:
+        data = json.loads(raw_data)
+    except:
+        return JsonResponse({"error": "Invalid JSON format"}, status=400)
+
+    boxes = data.get("boxes", [])
+    saved_boxes = []
+
+    # return JsonResponse({"boxes": boxes}, status=400)
+
+
+    # Save boxes to DB
+    for b in boxes:
+        box = SignatureBox.objects.create(
+            document=document,
+            page=b.get("page"),
+            x=float(b.get("x")),
+            y=float(b.get("y")),
+            width=float(b.get("width")),
+            height=float(b.get("height")),
+            type=b.get("type"),
+            rotation=b.get("rotation", 0),
+            color=b.get("color", "#000000"),
+            font_family=b.get("fontFamily", "Arial"),
+            font_size=b.get("fontSize", 10),
+            font_weight=b.get("fontWeight", "normal"),
+            font_style=b.get("fontStyle", "normal"),
+            text_decoration=b.get("textDecoration", "none"),
+            assigned_email=b.get("assigned_email", None),
+            required=b.get("required", False)
+        )
+        saved_boxes.append(box.id)
+
+    # Call separate merge function
+    merged_path = merge_boxes_to_pdf(document, boxes)
+
+    # Get only flows with order = 1 for this document
+    flows = DocumentSignFlow.objects.filter(document=document,order=1)
+    # print("flows",flows.token)
+    for flow in flows:
+        print("flows",flow.token)
+
+        # Generate signing URL using the unique token
+        encoded_email = urlsafe_base64_encode(force_bytes(flow.recipient_email))
+        sign_url = request.build_absolute_uri(reverse('sign_document', args=[flow.token,encoded_email]))
+    
+        # sign_url = request.build_absolute_uri(f'/document/sign/{flow.token}/')
+
+        # Render email content
+        html_content = render_to_string('mails/email_template_sign_request.html', {
+            'doc_title': flow.document.title,
+            'sign_url': sign_url,
+            'name': flow.recipient_name
+        })
+
+        # Compose sender display name
+        auth_user = request.user.get_full_name() or request.user.first_name
+        display_name = f"{auth_user} Via Eazeesign"
+
+        # Send email
+        email_sent = send_email_safe(
+            request,
+            subject=f"Complete with Eazeesign: {flow.document.title}",
+            body=html_content,
+            recipient_list=[flow.recipient_email],
+            from_email=f"{display_name} <{settings.DEFAULT_FROM_EMAIL}>"
+        )
+
+        if not email_sent:
+            return redirect(f'/document/{pk}/')
+
+            print(f"[ERROR] Failed to send email to {flow.recipient_email}")
+    messages.success(request, "Link sent successfully!")  # ✅ set success message
+    return redirect('document_list')
+
+
+
+    return JsonResponse({"success": str(flows)}, status=400)
+
+    # Return merged PDF as download
+    # return FileResponse(open(merged_path, 'rb'), as_attachment=True, filename=merged_path.split('/')[-1])
+
+
+import io
+@login_required
+def send_signing_link_old(request, pk):
     doc = get_object_or_404(Document, pk=pk)
     print("Start",request.POST)
     recipient_list = []
@@ -1262,6 +1454,15 @@ def disclosure_view(request):
 def sign_document(request, token, encoded_email=None):
     st = get_object_or_404(DocumentSignFlow, token=token)
     doc = st.document
+    # next_flow = DocumentSignFlow.objects.filter(
+    #     document=doc,
+    #     is_signed=False
+    # ).order_by('order').values(
+    #     'id', 'recipient_name', 'recipient_email', 'order', 'role', 'assigned_at'
+    # ).first()
+
+    # return JsonResponse({'ok': next_flow, 'error': 'POST only'}, status=405)
+
     try:
         signing_token = SigningToken.objects.get(document=doc, token=token)
         print("signing_token",signing_token)
@@ -1288,15 +1489,15 @@ def sign_document(request, token, encoded_email=None):
         })
 
     # # Already signed check
-    invalid_states = {
-        flow.is_signed: "You have already signed this document.",
-        flow.is_canceled: "You have canceled signing for this document.",
-        flow.assigned_by is not None: "This document has already been assigned to someone else."
-    }
+    # invalid_states = {
+    #     flow.is_signed: "You have already signed this document.",
+    #     flow.is_canceled: "You have canceled signing for this document.",
+    #     flow.assigned_by is not None: "This document has already been assigned to someone else."
+    # }
 
-    for condition, message in invalid_states.items():
-        if condition:
-            return render(request, 'esign/token_invalid.html', {"message": message})
+    # for condition, message in invalid_states.items():
+    #     if condition:
+    #         return render(request, 'esign/token_invalid.html', {"message": message})
 
 
     if st.security_token:  # sirf tab check kare jab token set hai
@@ -1321,6 +1522,14 @@ def sign_document(request, token, encoded_email=None):
             "flow": flow,
             "message": "You can only view this document. Signing is not allowed."
         })
+    
+    if flow.role == "cc":
+        return render(request, "esign/only_show_doc_cc.html", {
+            "document": flow.document,
+            "flow": flow,
+            "message": "You can only view this document. Signing is not allowed."
+        })
+    
     # ---- File source decide ----
     if flow.order in [0,1] :
         # First signer → use original uploaded file
@@ -1335,6 +1544,8 @@ def sign_document(request, token, encoded_email=None):
         prev_flow = DocumentSignFlow.objects.filter(
             document=doc, order=flow.order - 1, is_signed=True 
         ).first()
+
+        print("prev_flow",prev_flow.order)
 
 
         if prev_flow and prev_flow.merged_file:
@@ -1364,7 +1575,7 @@ def sign_document(request, token, encoded_email=None):
 
     # Signature boxes
     signature_boxes = list(
-    SignatureBox.objects.filter(document=doc).values(
+    SignatureBox.objects.filter(document=doc,assigned_email=email).values(
         'id',
         'page',
         'x',
@@ -1378,7 +1589,8 @@ def sign_document(request, token, encoded_email=None):
         'color',
         'font_weight',
         'font_style',
-        'text_decoration'
+        'text_decoration',
+        'required'
     )
     )
 
@@ -1398,7 +1610,7 @@ def sign_document(request, token, encoded_email=None):
         'token': token,
         'saved_signatures': list(saved_signatures),
         'allowed_pages_list': allowed_pages_list,
-        'signature_boxes': signature_boxes,
+        'signature_boxes': json.dumps(signature_boxes),
         'can_sign': True,
         'signing_order': flow.order,
         'message': None,
@@ -1429,28 +1641,7 @@ def apply_signatures(request):
 
         pdf = fitz.open(pdf_path)
 
-        # Insert signatures
-        # for p in placements:
-        #     page_num = int(p['page'])
-        #     page = pdf[page_num - 1]
-        #     rect = page.rect
-        #     x_pct = float(p['x_pct'])
-        #     y_pct = float(p['y_pct'])
-        #     w_pct = float(p.get('width_pct', 0.25))
-        #     h_pct = float(p.get('height_pct', 0.1))
-        #     target_w = rect.width * w_pct
-        #     target_h = rect.height * h_pct
-        #     x_pt = rect.x0 + rect.width * x_pct - target_w / 2
-        #     y_pt = rect.y0 + rect.height * y_pct - target_h / 2
-
-        #     if p.get('signature_id'):
-        #         sig = Signature.objects.get(pk=int(p['signature_id']))
-        #         page.insert_image(fitz.Rect(x_pt, y_pt, x_pt + target_w, y_pt + target_h), filename=sig.image.path)
-        #     elif p.get('base64'):
-        #         header, b64 = p['base64'].split(',', 1)
-        #         imgdata = base64.b64decode(b64)
-        #         imgstream = BytesIO(imgdata)
-        #         page.insert_image(fitz.Rect(x_pt, y_pt, x_pt + target_w, y_pt + target_h), stream=imgstream)
+      
         first_signature = None  # store first signature object
 
         for p in placements:
@@ -1545,8 +1736,9 @@ def apply_signatures(request):
             order__gt=flow.order,
             is_signed=False
         ).order_by('order').first()
-
+        print("next_flow",next_flow)
         if next_flow:
+            print("start")
             encoded_email = urlsafe_base64_encode(force_bytes(next_flow.recipient_email))
             sign_url = request.build_absolute_uri(reverse('sign_document', args=[next_flow.token, encoded_email]))
             
@@ -1599,6 +1791,37 @@ def apply_signatures(request):
             'application/pdf'
         )
         email_self.send(fail_silently=False)
+
+        total_recipients = DocumentSignFlow.objects.filter(document=doc).count()
+        print("total_recipients",total_recipients)
+        if total_recipients > 1:
+
+            all_signed = not DocumentSignFlow.objects.filter(document=doc, is_signed=False).exists()
+            print("all_signed",all_signed)
+            if all_signed:
+                # Get all recipient emails
+                recipient_emails = DocumentSignFlow.objects.filter(document=doc).values_list('recipient_email', flat=True)
+                display_name = "Eazeesign Via Eazeesign"
+                print("recipient_emails",recipient_emails)
+                email_self = EmailMessage(
+                    subject=f"Final Document: Complete with Eazeesign: {doc.title}",
+                    body=html_content,
+                    from_email=f"{display_name} <{settings.DEFAULT_FROM_EMAIL}>",
+                    to=recipient_emails
+                )
+                email_self.content_subtype = "html"
+
+                # email_self.content_subtype = "html"
+
+                flow.merged_file.open()
+                email_self.attach(
+                    flow.merged_file.name.split('/')[-1],
+                    flow.merged_file.read(),
+                    'application/pdf'
+                )
+                email_self.send(fail_silently=False)
+
+
 
         if 'accepted_terms' in request.session:
             del request.session['accepted_terms']
@@ -1941,69 +2164,59 @@ def send_signing_link_bulk(request, pk):
 
 
 def cancel_signing(request, token):
-    if request.method == "POST":
+    if request.method != "POST":
+        return JsonResponse({"success": False, "message": "Invalid request."})
+
+    import json
+    data = json.loads(request.body.decode('utf-8'))
+    reason = data.get("reason", "")
+
+    try:
+        flow = DocumentSignFlow.objects.get(token=token)
+    except DocumentSignFlow.DoesNotExist:
+        return JsonResponse({"success": False, "message": "Invalid token."})
+
+    # Only allow cancel if order is 0 or None
+    # if flow.order not in [0, None]:
+    #     return JsonResponse({"success": False, "message": "You must sign in order. Cannot cancel yet."})
+
+    # Mark the document as canceled
+    flow.is_canceled = True
+    flow.save()
+    document = flow.document
+    owner = document.owner
+
+    # Collect emails of already signed users
+    signed_flows = DocumentSignFlow.objects.filter(document=document, is_signed=True)
+    signed_emails = [f.recipient_email for f in signed_flows]
+
+    # Add owner email + user who canceled
+    recipient_emails = list(set(signed_emails + [owner.email, flow.recipient_email]))
+
+    if recipient_emails:
         try:
-            flow = DocumentSignFlow.objects.get(token=token)
-        except DocumentSignFlow.DoesNotExist:
-            return JsonResponse({"success": False, "message": "Invalid token."})
+            subject = f"Document Cancelled: {document.title}"
+            html_content = render_to_string('mails/document_cancelled_to_sign_email.html', {
+                'recipient_name': "",
+                'assigner_name': "",
+                'document_title': document.title,
+                'site_url': settings.SITE_URL,
+                'reason': reason
+            })
+            display_name = "Eazeesign Via Eazeesign"
+            send_email_safe(
+                request,
+                subject=subject,
+                body=html_content,
+                recipient_list=recipient_emails,
+                from_email=f"{display_name} <{settings.DEFAULT_FROM_EMAIL}>"
+            )
+        except Exception as e:
+            print(f"Email sending failed: {e}")
 
-        # Optional reason from request
-        import json
-        data = json.loads(request.body.decode('utf-8'))
-        reason = data.get("reason", "")
-
-        # Check order
-        if flow.order in [0, None]:
-            flow.is_canceled = 1  # canceled
-            flow.save()
-
-            # Send email to document owner
-            try:
-                document = flow.document  # Assuming DocumentSignFlow has FK to Document as 'document'
-                owner = document.owner
-
-                subject = f"Document Cancelled:: {document.title}"
-
-                # if you have a custom HTML email template, use it
-                html_content = render_to_string('mails/document_cancelled_to_sign_email.html', {
-                    'recipient_name': owner.get_full_name() or owner.username,
-                    'assigner_name': "",
-                    'document_title': document.title,
-                    'site_url': settings.SITE_URL
-                })
-
-                # send email using EmailMessage
-                # email_msg = EmailMessage(
-                #     subject=subject,
-                #     body=html_content,
-                #     from_email=settings.DEFAULT_FROM_EMAIL,  # sender is the one assigning
-                #     to=[owner.email],
-                # )
-
-                display_name = "Eazeesign Via Eazeesign"
-
-                email_sent = send_email_safe(
-                        request,
-                        subject=subject,
-                        body=html_content,
-                        recipient_list=[owner.email],
-                        from_email=f"{display_name} <{settings.DEFAULT_FROM_EMAIL}>"
-                    )
-                if not email_sent:
-                    return redirect(request.path)  # Wapas same page
+    return JsonResponse({"success": True})
 
 
-                # email_msg.content_subtype = "html"
-                # email_msg.send(fail_silently=False)
-
-            except Exception as e:
-                # Log error but continue
-                print(f"Email sending failed: {e}")
-
-            return JsonResponse({"success": True})
-        else:
-            return JsonResponse({"success": False, "message": "You must sign in order. Cannot cancel yet."})
-    return JsonResponse({"success": False, "message": "Invalid request."})
 
 def assign_document(request, token):
     if request.method == 'POST':

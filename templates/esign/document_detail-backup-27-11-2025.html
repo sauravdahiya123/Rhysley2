@@ -64,47 +64,6 @@
 }
 
   </style>
-
-
-<style>
-  .pdf-container {
-  width: 100%;
-  height: 85vh; /* adjust as needed */
-  overflow: auto;
-  position: relative;
-  background: #f8f9fa;
-  border: 1px solid #ddd;
-}
-
-.pdf-loader {
-  position: absolute;
-  inset: 0; /* shorthand for top:0; right:0; bottom:0; left:0 */
-  background: rgba(255, 255, 255, 0.9);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  z-index: 10;
-}
-
-.pdf-loader .spinner {
-  border: 6px solid #f3f3f3;
-  border-top: 6px solid #007bff;
-  border-radius: 50%;
-  width: 50px;
-  height: 50px;
-  animation: spin 1s linear infinite;
-  margin-bottom: 10px;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-</style>
-
-
 <!-- Document Sign Area -->
 {% if messages %}
   <div class="d-flex justify-content-center mt-3">
@@ -156,6 +115,58 @@
           <div class="signature-template btn btn-outline-secondary border-dashed mb-2" data-type="date" id="template-date">
             <i class="fas fa-calendar-alt me-1"></i> Date Signed
           </div>
+<!-- 
+          <div class="signature-template btn btn-outline-secondary border-dashed mb-2" data-type="company-stamp" id="template-company-stamp">
+            <i class="bi bi-building me-1"></i> Company Stamp
+          </div> -->
+
+      <!-- <div class="signature-template btn btn-outline-secondary border-dashed mb-2" data-type="company-stamp" id="template-company-stamp">
+        <i class="bi bi-building me-1"></i> Company Stamp
+      </div>
+
+      <div class="signature-template btn btn-outline-secondary border-dashed mb-2" data-type="company-stamp" id="template-company-stamp">
+        <i class="bi bi-building me-1"></i> Company Stamp
+      </div>
+
+      <div class="signature-template btn btn-outline-secondary border-dashed mb-2" data-type="company-stamp" id="template-company-stamp">
+        <i class="bi bi-building me-1"></i> Company Stamp
+      </div>
+
+      <div class="signature-template btn btn-outline-secondary border-dashed mb-2" data-type="company-stamp" id="template-company-stamp">
+        <i class="bi bi-building me-1"></i> Company Stamp
+      </div>
+
+      <div class="signature-template btn btn-outline-secondary border-dashed mb-2" data-type="company-stamp" id="template-company-stamp">
+        <i class="bi bi-building me-1"></i> rfghj Stamp
+      </div>
+
+      <div class="signature-template btn btn-outline-secondary border-dashed mb-2" data-type="company-stamp" id="template-company-stamp">
+        <i class="bi bi-building me-1"></i> Company Stamp
+      </div>
+
+      <div class="signature-template btn btn-outline-secondary border-dashed mb-2" data-type="company-stamp" id="template-company-stamp">
+        <i class="bi bi-building me-1"></i> Company Stamp
+      </div>
+
+      <div class="signature-template btn btn-outline-secondary border-dashed mb-2" data-type="company-stamp" id="template-company-stamp">
+        <i class="bi bi-building me-1"></i> Company Stamp
+      </div>
+
+      <div class="signature-template btn btn-outline-secondary border-dashed mb-2" data-type="company-stamp" id="template-company-stamp">
+        <i class="bi bi-building me-1"></i> Company Stamp
+      </div>
+
+      <div class="signature-template btn btn-outline-secondary border-dashed mb-2" data-type="company-stamp" id="template-company-stamp">
+        <i class="bi bi-building me-1"></i> Company Stamp
+      </div>
+
+      <div class="signature-template btn btn-outline-secondary border-dashed mb-2" data-type="company-stamp" id="template-company-stamp">
+        <i class="bi bi-building me-1"></i> Company Stamp
+      </div>
+
+      <div class="signature-template btn btn-outline-secondary border-dashed mb-2" data-type="company-stamp" id="template-company-stamp">
+        <i class="bi bi-building me-1"></i> Company Stamp
+      </div> -->
 
       <h6 hidden>Select Allowed Pages</h6>
       <div id="page-selector" hidden></div> 
@@ -164,7 +175,43 @@
   </div>
 </div>
 </div>
+<style>
+  .pdf-container {
+  width: 100%;
+  height: 85vh; /* adjust as needed */
+  overflow: auto;
+  position: relative;
+  background: #f8f9fa;
+  border: 1px solid #ddd;
+}
 
+.pdf-loader {
+  position: absolute;
+  inset: 0; /* shorthand for top:0; right:0; bottom:0; left:0 */
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+}
+
+.pdf-loader .spinner {
+  border: 6px solid #f3f3f3;
+  border-top: 6px solid #007bff;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 10px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+</style>
 <div class="col-md-12 col-lg-10">
      <p>Document for Review & Signature</p>
 
@@ -185,14 +232,21 @@
 </div>
 <!-- Document Sign Area End -->
 
-  <form method="post" 
-            action="{% url 'send_signing_link' document.pk %}{% if request.GET.template_id %}?template_id={{ request.GET.template_id }}{% endif %}" 
-            id="signing-form">
-            {% csrf_token %}
-            <input type="hidden" name="boxes" id="boxes-input"> <!-- JSON boxes -->
-<input type="hidden" id="box-dragged" name="box_dragged" value="">
 
-            
+  <script>
+const form = document.getElementById('signing-form');
+
+form.addEventListener('submit', function(e){
+    // Check browser validation first
+    if(!form.checkValidity()){
+        e.preventDefault();          // stop submit
+        form.reportValidity();       // show required messages
+        return;
+    }
+
+    serializeBoxes(e, 0);  // You can keep your existing logic
+});
+</script>
 
 <div class="row mt-3">
   <div class="col-sm-12 text-end">
@@ -200,12 +254,8 @@
     <i class="bi bi-send me-1"></i> Send Signing Link </button>   
   </div>
 </div>
-</form>
 
 </div>
-
-
-
 
 
 <!-- Formatting Sidebar -->
@@ -223,6 +273,58 @@
     <label class="form-check-label" for="boxRequiredCheckbox">Required</label>
   </div>
 </div>
+
+  <!-- <div class="accordion accordion-flush mb-2" id="accordionFlushRecipients">
+  <div class="accordion-item">
+    <h2 class="accordion-header" id="flush-headingOne">
+      <button class="accordion-button rounded p-2 py-1 bg-transparent collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseOne" aria-expanded="false" aria-controls="flush-collapseOne">
+        Select Recipients
+      </button>
+    </h2>
+    <div id="flush-collapseOne" class="accordion-collapse collapse" aria-labelledby="flush-headingOne" data-bs-parent="#accordionFlushRecipients">
+      <div class="accordion-body p-2">
+          <div class="form-check mb-1">
+              <input class="form-check-input" type="radio" name="recipientsRadios" id="recipientsRadios1" value="option1" checked="">
+              <label class="form-check-label" for="recipientsRadios1">
+                dinesh.siwas@rmail.team
+              </label>
+          </div>
+          <div class="form-check mb-1">
+              <input class="form-check-input" type="radio" name="recipientsRadios" id="recipientsRadios2" value="option2">
+              <label class="form-check-label" for="recipientsRadios2">
+                amit.kumar@rmail.team
+              </label>
+          </div>
+          <div class="form-check mb-1">
+              <input class="form-check-input" type="radio" name="recipientsRadios" id="recipientsRadios3" value="option3">
+              <label class="form-check-label" for="recipientsRadios3">
+                jyoti.yadav@rmail.team
+              </label>
+          </div>
+          <div class="form-check mb-1">
+              <input class="form-check-input" type="radio" name="recipientsRadios" id="recipientsRadios4" value="option4">
+              <label class="form-check-label" for="recipientsRadios4">
+                priyanka.pal@rmail.team
+              </label>
+          </div>
+          <div class="form-check mb-1">
+              <input class="form-check-input" type="radio" name="recipientsRadios" id="recipientsRadios5" value="option5">
+              <label class="form-check-label" for="recipientsRadios5">
+                saurav.dahiya@rmail.team
+              </label>
+          </div>
+        </div>
+    </div>
+
+  </div>
+  </div>
+
+  <div class="form-check mb-3">
+      <input class="form-check-input" type="checkbox" value="" id="flexCheckRequired" Required>
+      <label class="form-check-label" for="flexCheckRequired">
+        Required
+      </label>
+    </div> -->
 
   <h6 id="formatTitle">Signature Formatting</h6>  
   <label class="form-label mt-2">Font Family</label>
@@ -255,90 +357,6 @@
 
 
 <!-- JS -->
-<script>
-const form = document.getElementById('signing-form');
-form.addEventListener('submit', function(e){
-    // Check browser validation first
-    if(!form.checkValidity()){
-        e.preventDefault();          // stop submit
-        form.reportValidity();       // show required messages
-        return;
-    }
-
-    serializeBoxes(e, 0);  // You can keep your existing logic
-});
-
-
-
-function validateBoxEmailAssignment() {
-  const emails = getRecipientEmails();     // all recipient emails
-const allBoxes = document.querySelectorAll(".sig-box");
-
-// Collect all assigned emails from boxes
-const assignedEmails = Array.from(allBoxes)
-    .map(box => box.dataset.assignedEmail)
-    .filter(email => email); // ignore empty
-
-// Check if every email from emails[] exists in assignedEmails
-let missing = emails.filter(email => !assignedEmails.includes(email));
-
-if (missing.length > 0) {
-    alert("Every email must be assigned to a box. Missing: " + missing.join(", "));
-    return false; // stop further action
-}
-
-// All emails are assigned
-console.log("All emails assigned correctly!");
-
-
-
-    return true;
-}
-
-
-
-
-// Validate the recipient form before serializing
-function validateAndSerializeRecipients(event) {
-    event.preventDefault(); // stop default submission
-
-    //    const boxDraggedInput = document.getElementById("box-dragged");
-    
-    // if (!boxDraggedInput.value || boxDraggedInput.value == "0") {
-    //     // e.preventDefault();
-    //     alert("Please drag at least 1 box on the document.");
-    //     return;
-    // }
-
-
-
-    // const boxDraggedInput = document.getElementById("box-dragged");
-    // const draggedBoxesCount = parseInt(boxDraggedInput.value); 
-    // const emailsCount = savedEmails.length;
-
-    // // Validate boxes >= emails
-    // if (draggedBoxesCount < emailsCount) {
-    //     alert(`Please drag at least ${emailsCount} boxes on the document. 
-    // You have dragged only ${draggedBoxesCount}.`);
-    //     return;
-    // }
-
-
-    if (!validateBoxEmailAssignment()) {
-    return;  // Stop form submit
-}
-
-
-
-   
-    // 3️⃣ Validate email format
-   
-    // 5️⃣ Everything valid — call your serializeBoxes function
-    if (typeof serializeBoxes === "function") {
-        serializeBoxes(event, 0);
-    }
-}
-</script>
 
 
 <script>
@@ -384,6 +402,55 @@ function openSidebar() {
 
 </script>
 
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    let emailsFromCSV = [];
+
+    const fileInput = document.getElementById('csv-file');
+    const previewDiv = document.getElementById('recipient-preview');
+    const emailCount = document.getElementById('email-count');
+    const hiddenCsvInput = document.getElementById('csv_emails');
+
+    // CSV Upload
+    fileInput.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        emailsFromCSV = event.target.result
+        .split(/\r?\n|,/)  
+        .map(e => e.trim()) 
+        .filter(e => e.length > 0);
+
+            // preview
+        const previewLimit = 50;
+        previewDiv.innerHTML = '';
+        emailsFromCSV.slice(0, previewLimit).forEach(email => {
+          const span = document.createElement('span');
+          span.className = 'badge bg-primary me-1 mb-1';
+          span.textContent = email;
+          previewDiv.appendChild(span);
+        });
+        emailCount.textContent = emailsFromCSV.length > previewLimit
+        ? `+${emailsFromCSV.length - previewLimit} more emails`
+        : '';
+      };
+      reader.readAsText(file);
+    });
+
+    // On form submit
+    document.getElementById('bulk-email-form').addEventListener('submit', function(e) {
+        e.preventDefault(); // prevent default submit
+
+        // ✅ Set CSV emails
+        hiddenCsvInput.value = JSON.stringify(emailsFromCSV);
+
+        // ✅ Serialize boxes
+        serializeBoxes(e, 1); // this will submit the form
+      });
+  });
+</script>
 
 <script>
 const recipientContainer = document.getElementById("recipient-list");
@@ -424,9 +491,6 @@ recipientContainer.addEventListener("keydown", function(e) {
 });
 </script>
 
-<script>
-    const savedEmails = {{ emails|safe }};
-</script>
 
 
 
@@ -532,7 +596,11 @@ templates.forEach(template => {
         boxDraggedInput.value = currentValue + 1;
     }
 
-   
+    const boxDraggedInputbulk = document.getElementById('box-dragged-order');
+    if (boxDraggedInputbulk) {
+        let currentValue = parseInt(boxDraggedInputbulk.value) || 0;
+        boxDraggedInputbulk.value = currentValue + 1;
+    }
   });
 });
 
@@ -615,61 +683,29 @@ if(foundPage){
 });
 
 document.addEventListener('mouseup', e => {
-  if (!draggingBox) return;
+  if(!draggingBox) return;
 
-  // 1️⃣ First: finish the drag and attach handles
+    if (draggingBox) {
+
+    selectedBox = draggingBox;
+    autoAssignFirstEmail(selectedBox);
+
+    // Force sidebar to open after DOM updates
+    setTimeout(() => {
+        sidebar.classList.add('active');
+    }, 50);
+
+    showFormatSidebar(selectedBox);
+    openPairingForBox(selectedBox);
+}
+
+
   draggingBox.classList.remove('dragging');
-
-  if (currentPage) {
-    // makeDraggable will create resize + rotate handles here
-    makeDraggable(draggingBox, currentPage);
-  }
-
-  // 2️⃣ Now we can safely auto-assign email AND color rotate-handle,
-  // because rotateHandle now exists on this box.
-  selectedBox = draggingBox;
-  autoAssignFirstEmail(selectedBox);
-
-  // 3️⃣ Open sidebar + formatting + pairing UI
-  setTimeout(() => {
-    sidebar.classList.add('active');
-  }, 50);
-
-  showFormatSidebar(selectedBox);
-  openPairingForBox(selectedBox);
-
-  // 4️⃣ Cleanup
+  if(currentPage) makeDraggable(draggingBox, currentPage);
   draggingBox = null;
   currentPage = null;
   isDraggingSignature = false;
 });
-
-
-function clearSidebarSelection() {
-
-  // Remove radio selections
-  const radioContainer = document.getElementById('emailRadioList');
-  if (radioContainer) {
-    radioContainer.innerHTML = "";
-  }
-
-  // Reset required checkbox
-  const req = document.getElementById('boxRequiredCheckbox');
-  if (req) {
-    req.checked = false;
-  }
-
-  // Reset title
-  const title = document.getElementById('formatTitle');
-  if (title) {
-    title.textContent = "Signature Formatting";
-  }
-
-  // Remove active class from sidebar
-  const sidebar = document.getElementById('formatSidebar');
-  sidebar.classList.remove('active');
-}
-
 
 // Drag, Resize, Rotate
 function makeDraggable(box, pageDiv){
@@ -705,33 +741,23 @@ function makeDraggable(box, pageDiv){
   box.appendChild(deleteBtn);
 
   // Delete box when clicked
+  // Delete box when clicked
   deleteBtn.addEventListener('click', (e) => {
-  e.stopPropagation();
+    e.stopPropagation();
 
-  const assigned = box.dataset.assignedEmail;
+    // if this box had an assigned email, re-enable that email in the sidebar
+    const assigned = box.dataset.assignedEmail;
+    if (assigned && assigned !== "") {
+      enableEmailInSidebar(assigned);
+    }
 
-  // ✅ Re-enable that email immediately
-  if (assigned && assigned !== "") {
-    enableEmailInSidebar(assigned);
-  }
-
-  // ✅ If this box is currently selected in sidebar → cleanup UI
-  if (selectedBox === box) {
-    clearSidebarSelection();
-    selectedBox = null;
-  }
-
-  // ✅ Remove the box itself
-  box.remove();
-
-  // Box counter logic stays
-  const boxDraggedInput = document.getElementById('box-dragged');
-  if (boxDraggedInput) {
-      let currentValue = parseInt(boxDraggedInput.value) || 0;
-      boxDraggedInput.value = Math.max(0, currentValue - 1);
-  }
-});
-
+    box.remove();
+    const boxDraggedInput = document.getElementById('box-dragged');
+    if (boxDraggedInput) {
+        let currentValue = parseInt(boxDraggedInput.value) || 0;
+        boxDraggedInput.value = Math.max(0, currentValue - 1);
+    }
+  });
 
     // Resize
   resizeHandle.addEventListener('mousedown', e=>{
@@ -769,49 +795,25 @@ function makeDraggable(box, pageDiv){
     box.setAttribute('contenteditable','true');
     box.style.padding='5px'; box.style.textAlign='center';
   }
-
 }
 
 /* ----------------- Pairing UI logic ----------------- */
 
 // simple deterministic color palette for recipients
-function getColorForEmail(email) {
-  let hash = 0;
-  for (let i = 0; i < email.length; i++) {
-    hash = email.charCodeAt(i) + ((hash << 5) - hash);
-  }
-
-  const hue = Math.abs(hash % 360);
-  const saturation = 70;
-  const lightness = 50;
-
-  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+function getColorForIndex(i) {
+  const colors = ["#e74c3c","#2980b9","#27ae60","#8e44ad","#d35400","#16a085","#7f8c8d"];
+  return colors[i % colors.length];
 }
-
 
 // read recipient emails from inputs on page (fallback if none)
-// function getRecipientEmails() {
-//   const inputs = document.querySelectorAll('#recipient-list input[name="email[]"]');
-//   if (!inputs || inputs.length === 0) {
-//     // placeholder development emails
-//     return ["test1@example.com","test2@example.com","test3@example.com"];
-//   }
-//   return Array.from(inputs).map(i => i.value.trim()).filter(v => v !== "");
-// }
-
 function getRecipientEmails() {
   const inputs = document.querySelectorAll('#recipient-list input[name="email[]"]');
-
   if (!inputs || inputs.length === 0) {
-    // placeholder ki jagah DB ke flows se aaye emails return karo
-    return savedEmails;  
+    // placeholder development emails
+    return ["test1@example.com","test2@example.com","test3@example.com"];
   }
-
-  return Array.from(inputs)
-    .map(i => i.value.trim())
-    .filter(v => v !== "");
+  return Array.from(inputs).map(i => i.value.trim()).filter(v => v !== "");
 }
-
 
 // disable radio(s) for an email (so it cannot be used by another box)
 // function disableEmailInSidebar(email) {
@@ -831,16 +833,6 @@ function autoAssignFirstEmail(box) {
     if (!emails || emails.length === 0) return;
 
     const firstEmail = emails[0];
-    const color = getColorForEmail(firstEmail);
-
-    box.dataset.assignedEmail = firstEmail;
-    box.style.border = `2px solid ${color}`;
-
-    const rotateHandle = box.querySelector('.rotate-handle');
-    if (rotateHandle) {
-      rotateHandle.style.background = color;
-      rotateHandle.style.borderColor = color;
-    }
 
     // Only assign if not already assigned
     if (!box.dataset.assignedEmail) {
@@ -864,7 +856,7 @@ function openPairingForBox(box) {
   const emails = getRecipientEmails();
   emails.forEach((email, idx) => {
     const radioId = `${box.id}_assign_${idx}`;
-    const color = getColorForEmail(email);
+    const color = getColorForIndex(idx);
 
     const wrapper = document.createElement('div');
     wrapper.className = 'form-check mb-1';
@@ -887,16 +879,7 @@ function openPairingForBox(box) {
       }
 
       box.dataset.assignedEmail = email;
-
-      // Border color
       box.style.border = `2px solid ${color}`;
-
-      // Rotate handle color
-      const rotateHandle = box.querySelector('.rotate-handle');
-      if (rotateHandle) {
-        rotateHandle.style.background = color;
-        rotateHandle.style.borderColor = color;
-      }
 
       // disable this email so no other box can pick it
       // disableEmailInSidebar(email);
@@ -931,7 +914,7 @@ function openPairingForBox(box) {
 
 // Serialize all boxes and submit as percentage
 function serializeBoxes(event,type){
-      // document.getElementById('loaderOverlay').style.display = 'flex';
+      document.getElementById('loaderOverlay').style.display = 'flex';
 
   event.preventDefault();
   const boxes = [];

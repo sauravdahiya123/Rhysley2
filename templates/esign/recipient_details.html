@@ -40,13 +40,13 @@
     <div class="mb-4 d-flex align-items-center gap-4">
 
         <div class="form-check">
-            <input class="form-check-input" type="radio" name="signOrderOption" id="radioOrder" checked>
+            <input class="form-check-input"  value="in_order" type="radio" name="signOrderOption" id="radioOrder" checked>
             <label class="form-check-label" for="radioOrder">In Order</label>
         </div>
 
         <div class="form-check">
-            <input class="form-check-input" type="radio" name="signOrderOption" id="radioInOrder">
-            <label class="form-check-label" for="radioInOrder">Order</label>
+            <input class="form-check-input" value="order" type="radio" name="signOrderOption" id="radioInOrder">
+            <label class="form-check-label" for="radioInOrder" >Order</label>
         </div>
 
     </div>
@@ -83,7 +83,6 @@
                 <div class="col-md-2 offset-md-1">
                   <div class="d-flex gap-3 mb-4 w-100">
                       <select class="form-select" id="signUserActions" name="signUserActions_1" aria-label="Sign User Actions" required>
-                        <option selected>Needs to Sign</option>
                         <option value="Needs to Sign">Needs to Sign</option>
                         <option value="View Only">View Only</option>
                         <option value="Receives a Copy (CC)">Receives a Copy (CC)</option>
@@ -127,7 +126,7 @@
                         <label class="form-label">Subject <span class="text-danger">*</span></label>
                         <div id="subjectCount" class="small text-muted">0/100</div>
                     </div>
-                    <input type="text" name="subject" id="subjectInput" class="form-control" maxlength="100" placeholder="Enter subject">
+                    <input type="text" required name="subject" id="subjectInput" class="form-control" maxlength="100" placeholder="Enter subject">
                 </div>
 
                 <!-- MESSAGE -->
@@ -136,7 +135,7 @@
                         <label class="form-label">Message <span class="text-danger">*</span></label>
                         <div id="messageCount" class="small text-muted">0/1000</div>
                     </div>
-                    <textarea name="message" id="messageInput" class="form-control" rows="5" maxlength="1000" placeholder="Enter message"></textarea>
+                    <textarea name="message" required id="messageInput" class="form-control" rows="5" maxlength="1000" placeholder="Enter message"></textarea>
                 </div>
 
             </div>
@@ -443,7 +442,7 @@ document.getElementById("subjectInput").addEventListener("input", function () {
     subjectCount.textContent = `${this.value.length}/100`;
 });
 
-document.getElementById("messageTextarea").addEventListener("input", function () {
+document.getElementById("messageInput").addEventListener("input", function () {
     messageCount.textContent = `${this.value.length}/1000`;
 });
 

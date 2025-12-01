@@ -138,6 +138,9 @@ class SignatureBox(models.Model):
     font_weight = models.CharField(max_length=20, default='normal')
     font_style = models.CharField(max_length=20, default='normal')
     text_decoration = models.CharField(max_length=20, default='none')
+    assigned_email = models.EmailField(null=True, blank=True)
+    required = models.BooleanField(default=False)
+
     # created_at = models.DateTimeField(auto_now_add=True)
     # updated_at = models.DateTimeField(auto_now=True)
 
