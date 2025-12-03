@@ -56,6 +56,8 @@ urlpatterns = [
     path('otp_email/', views.otp_email, name='otp_email'),
     path('password_email/', views.password_email, name='password_email'),
     path('recipient_details/', views.recipient_details, name='recipient_details'),
+    path('view-status/<str:token>/', views.mark_viewed_ajax, name='mark_viewed_ajax'),
+
 
 
 ]

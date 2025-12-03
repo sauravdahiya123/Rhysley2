@@ -166,6 +166,9 @@ class DocumentSignFlow(models.Model):
     is_signed = models.BooleanField(default=False)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="signer")  # ✅ NEW FIELD
 
+    is_viewed = models.BooleanField(default=False)
+    viewed_at = models.DateTimeField(null=True, blank=True)
+
     signed_at = models.DateTimeField(null=True, blank=True)
     merged_file = models.FileField(upload_to='signed_docs/', null=True, blank=True)  # new field
     is_canceled = models.BooleanField(default=False)  # ✅ new column for cancel/refuse

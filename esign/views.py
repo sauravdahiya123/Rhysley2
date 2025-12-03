@@ -2217,92 +2217,117 @@ def cancel_signing(request, token):
     return JsonResponse({"success": True})
 
 
-
 def assign_document(request, token):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)  # parse JSON
-            email = data.get("assign_email")
-            name = data.get("assign_name")
-        except json.JSONDecodeError:
-            return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
 
-        if not email or not name:
-            return JsonResponse({'status': 'error', 'message': 'Name and Email are required'}, status=400)
+    try:
+        data = json.loads(request.body)
+        email = data.get("assign_email")
+        name = data.get("assign_name")
+    except json.JSONDecodeError:
+        return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
 
-        # get original document flow by token
+    if not email or not name:
+        return JsonResponse({'status': 'error', 'message': 'Name and Email are required'}, status=400)
+
+    try:
+        # Get original document flow
         st = get_object_or_404(DocumentSignFlow, token=token)
 
-        # generate new token for assigned signer
-        # new_token = secrets.token_urlsafe(16)
+        # Generate new token
         new_token = get_random_string(32)
-        # create a new flow record
+
+        # Create new flow record
         new_flow = DocumentSignFlow.objects.create(
             document=st.document,
             token=new_token,
             recipient_name=name,
             recipient_email=email,
-            order=0,
+            order=st.order,
             role='Signer'
         )
+
+        # Link original flow to new assigned flow
         st.assigned_by = new_flow.id
         st.save()
+        
+        
+        old_email = st.recipient_email
 
-        signing_token = SigningToken.objects.get(document=st.document, token=token)
-        SigningToken.objects.create(document=st.document, token=new_token, expires_at=signing_token.expires_at)
-        # build document link
-        # encoded_email = urlsafe_base64_encode(force_bytes(email))
-        # document_link = f"{settings.SITE_URL}/document/sign/{new_token}/{encoded_email}"
+        # Get all boxes assigned to this signer for this document
+        old_boxes = SignatureBox.objects.filter(
+            document=st.document,
+            assigned_email=old_email
+        )
+        
+        for b in old_boxes:
+            SignatureBox.objects.create(
+                document=b.document,
+                page=b.page,
+                x=b.x,
+                y=b.y,
+                width=b.width,
+                height=b.height,
+                type=b.type,
+                rotation=b.rotation,
+                color=b.color,
+                font_family=b.font_family,
+                font_size=b.font_size,
+                font_weight=b.font_weight,
+                font_style=b.font_style,
+                text_decoration=b.text_decoration,
+                assigned_email=email,     # NEW EMAIL
+                required=b.required
+            )
+        
 
-        encoded_email = urlsafe_base64_encode(force_bytes(email))
-        document_link = request.build_absolute_uri(reverse('sign_document', args=[new_token,encoded_email]))
-        # prepare email content
-        subject = f"You've been assigned a document to sign: {st.document.title if hasattr(st.document, 'title') else 'Document'}"
+        # Copy signing token
+        try:
+            signing_token = SigningToken.objects.get(document=st.document, token=token)
+            SigningToken.objects.create(
+                document=st.document,
+                token=new_token,
+                expires_at=signing_token.expires_at
+            )
+        except SigningToken.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Original signing token not found'}, status=404)
 
-        # if you have a custom HTML email template, use it
-        # html_content = render_to_string('mails/email_template_sign_request.html', {
-        #     'recipient_name': name,
-        #     'assigner_name': st.recipient_name,
-        #     'document_title': getattr(st.document, 'title', 'Document'),
-        #     'document_link': document_link,
-        #     'site_url': settings.SITE_URL
-        # })
-        recipient_email = st.recipient_email  # e.g. "saurav.dahiya@gmail.com"
-        user_name = recipient_email.split("@")[0]
+        # Encode assigned user's email
+        # encoded_email = urlsafe_base64_encode(force_bytes(email)).decode()
+        # document_link = request.build_absolute_uri(reverse('sign_document', args=[new_token, encoded_email]))
+        # Encode assigned user's email
+        encoded_email = urlsafe_base64_encode(force_bytes(email))  # no .decode()
+        document_link = request.build_absolute_uri(reverse('sign_document', args=[new_token, encoded_email]))
+        
 
+
+        # Prepare email
+        subject = f"You've been assigned a document to sign: {getattr(st.document, 'title', 'Document')}"
         html_content = render_to_string('mails/email_template_sign_request.html', {
-                    'doc_title': getattr(st.document, 'title', 'Document'),
-                    'sign_url': document_link,
-                    'name':  user_name
-                    })
-        # send email using EmailMessage
-        # email_msg = EmailMessage(
-        #     subject=subject,
-        #     body=html_content,
-        #     from_email=st.recipient_email,  # sender is the one assigning
-        #     to=[email],
-        # )
-        # email_msg.content_subtype = "html"
-        # email_msg.send(fail_silently=False)
+            'doc_title': getattr(st.document, 'title', 'Document'),
+            'sign_url': document_link,
+            'name': name
+        })
 
         display_name = "Eazeesign Via Eazeesign"
 
         email_sent = send_email_safe(
-                        request,
-                        subject=subject,
-                        body=html_content,
-                        recipient_list=[st.recipient_email],
-                        from_email=f"{display_name} <{settings.DEFAULT_FROM_EMAIL}>"
-                    )
-        if not email_sent:
-            return redirect(request.path)  # Wapas same page
+            request,
+            subject=subject,
+            body=html_content,
+            recipient_list=[email],
+            from_email=f"{display_name} <{settings.DEFAULT_FROM_EMAIL}>"
+        )
 
+        if not email_sent:
+            return JsonResponse({'status': 'error', 'message': 'Failed to send email'}, status=500)
 
         return JsonResponse({'status': 'success', 'message': 'Document assigned and email sent successfully!'})
 
-    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
-
-
+    except Exception as e:
+        # Catch-all for unexpected errors
+        return JsonResponse({'status': 'error', 'message': f'An unexpected error occurred: {str(e)}'}, status=500)
 
 from django.http import HttpResponse, FileResponse
 import os
@@ -2649,6 +2674,7 @@ def razorpay_success(request):
         last_name = notes.get("last_name", "")
 
         user_email = notes.get("email") or request.GET.get("email")
+
         if not user_email:
             messages.error(request, "Email is required. Please register to continue.")
             return redirect("register")   
@@ -2679,10 +2705,35 @@ def razorpay_success(request):
                 "is_active": True
             }
         )
+        
+        # return JsonResponse({"success": phone, "error": "Missing order id"}, status=400)
+
 
         if created:
             user.set_password(password)
             user.save()
+            
+        profile, prof_created = Profile.objects.get_or_create(user=user)
+
+        # 4️⃣ Save phone in profile if available
+        if phone:
+            profile.phone = phone
+            profile.save()
+        
+
+            
+        # return JsonResponse({
+        #     "created": created,
+        #     "user": {
+        #         "id": user.id,
+        #         "email": user.email,
+        #     #     "username": user.username,
+        #     #     "first_name": user.first_name,
+        #     #     "last_name": user.last_name,
+        #         # "phone": user.phone,
+        #     #     "is_active": user.is_active
+        #     }
+        # })
 
         # ---------------------------------------------------------
         # Create Subscription Entry
@@ -2723,7 +2774,7 @@ def razorpay_success(request):
             "customer_phone": phone,
             "password": password,
             "plan": plan,
-            "interval": interval,
+            "interval": mapped_plan,
             "login_url": login_url,
         })
 
@@ -2745,11 +2796,11 @@ def razorpay_success(request):
 
     except razorpay.errors.SignatureVerificationError:
         messages.error(request, "Payment signature invalid.")
-        return redirect("register")
+        return redirect("signup_basic")
 
     except Exception as e:
         messages.error(request, str(e))
-        return redirect("register")
+        return redirect("signup_basic")
 def razorpay_cancel(request):
     return render(request, "payments/cancel.html")
 
@@ -3171,6 +3222,7 @@ def signup_multi_step(request):
                 profile.phone = phone
                 profile.save()
                 otp = get_random_string(6, allowed_chars="0123456789")
+                request.session['email_otp'] = otp
                 html_content = render_to_string('mails/signup_otp_email.html', {
                 
                 'EXPIRY_MINUTES': "10",
@@ -3210,6 +3262,7 @@ def signup_multi_step(request):
             otp = request.POST.get('emailVerificationCode')
             user_id = request.session.get('signup_user_id')
             user_otp = request.session.get('email_otp')
+            phone = request.session.get("signup_phone")
             print("user_id",user_id)
             user = User.objects.get(id=user_id)
             
@@ -3217,9 +3270,16 @@ def signup_multi_step(request):
                 user.is_email_verified = True
                 user.save()
                 context['step'] = 3
+                otp_result = send_otp_sms(request, phone)
+
+                    
+                            
+                
+                
             else:
                 context['step'] = 1
-                messages.error(request, f"Invalid email OTP. You entered: {user_otp} {otp}")
+                # messages.error(request, f"Invalid email OTP. You entered: {user_otp} {otp}")
+                messages.error(request, f"Invalid email OTP.")
             
             return render(request, 'esign/signup_steps.html', context)
         
@@ -3227,17 +3287,16 @@ def signup_multi_step(request):
             # Step 2: Verify Phone OTP
             otp = request.POST.get('phoneVerificationCode')
             user_id = request.session.get('signup_user_id')
-            phone_otp = request.session.get('phone_otp')
+            phone_otp = request.session.get('mobile_otp')
             user = User.objects.get(id=user_id)
             
-            if "123456" == otp:
+            if str(phone_otp) == str(otp):
                 user.is_phone_verified = True
                 user.save()
                 context['step'] = 4
             else:
                 messages.error(request, "Invalid phone OTP.")
                 context['step'] = 3
-
             
             return render(request, 'esign/signup_steps.html', context)
         
@@ -3279,6 +3338,7 @@ def signup_multi_step(request):
     return render(request, 'esign/signup_steps.html', context)
 
 import requests
+import urllib.parse
 
 @csrf_exempt
 def send_mobile_otp(request):
@@ -3286,6 +3346,7 @@ def send_mobile_otp(request):
         return JsonResponse({"success": False, "message": "Invalid request. POST required."})
 
     phone = request.POST.get("phone")
+ 
     if not phone:
         return JsonResponse({"success": False, "message": "Phone number is required."})
 
@@ -3297,9 +3358,9 @@ def send_mobile_otp(request):
     request.session['mobile_number'] = phone
 
     # Message to send
-    message = f"Your OTP code is {otp}"
+    message = f"{otp} is your One Time Password for account verification at mehar.com. This code is valid for 10 minutes only. Team Mehar Fashion"
+    encoded_message = urllib.parse.quote(message)
 
-    # Sinch SMS GET API
     sms_sender_id = settings.SMS_SENDER_ID
     send_sms_url = (
         "https://push3.aclgateway.com/servlet/"
@@ -3310,7 +3371,7 @@ def send_mobile_otp(request):
         "&contenttype=1"
         f"&from={sms_sender_id}"
         f"&to={phone}"
-        f"&text={message}"
+        f"&text={encoded_message}"
         "&alert=1&selfid=true"
     )
 
@@ -3320,6 +3381,64 @@ def send_mobile_otp(request):
         return JsonResponse({"success": True, "message": "OTP sent successfully!", "response": response.text})
     except requests.exceptions.RequestException as e:
         return JsonResponse({"success": False, "message": f"Failed to send OTP: {str(e)}"})
+
+
+
+
+def send_otp_sms(request, phone):
+    """
+    Send OTP to mobile number using ACL Gateway (Sinch).
+    Stores OTP & phone in session.
+    Returns dict: { success: True/False, otp: int, response: "..." }
+    """
+
+    try:
+        # Generate OTP
+        otp = random.randint(100000, 999999)
+
+        # Save OTP in session
+        request.session['mobile_otp'] = otp
+        request.session['mobile_number'] = phone
+
+        # Message Template
+        message = (
+            f"{otp} is your One Time Password for account verification at mehar.com. "
+            "This code is valid for 10 minutes only. Team Mehar Fashion"
+        )
+        encoded_message = urllib.parse.quote(message)
+
+        sms_sender_id = settings.SMS_SENDER_ID
+
+        # SMS URL
+        send_sms_url = (
+            "https://push3.aclgateway.com/servlet/"
+            "com.aclwireless.pushconnectivity.listeners.TextListener?"
+            f"appid={settings.SINCH_APPID}"
+            f"&userId={settings.SINCH_USERID}"
+            f"&pass={settings.SINCH_PASSWORD}"
+            "&contenttype=1"
+            f"&from={sms_sender_id}"
+            f"&to={phone}"
+            f"&text={encoded_message}"
+            "&alert=1&selfid=true"
+        )
+
+        response = requests.get(send_sms_url, timeout=10)
+
+        return {
+            "success": True,
+            "otp": otp,
+            "response": response.text
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+        
+
+
 
 def user_login1(request):
     step = int(request.POST.get('step', 0)) if request.method == 'POST' else 0
@@ -3373,6 +3492,7 @@ def user_login1(request):
                     context['stepInput'] = 3
                     context['phone_prefill'] = phone[-4:]  # last 4 digits
                     messages.success(request, "Password verified! Please select verification method.")
+                    
                     return render(request, 'esign/login.html', context)
                 else:
                     # User has no phone number → login and redirect to index
@@ -3401,8 +3521,16 @@ def user_login1(request):
                 try:
                     user = User.objects.get(email=email)
                     phone = user.profile.phone
+
+                    otp_result = send_otp_sms(request, phone)
+                
+                                        
+                    
+                    
                 except Profile.DoesNotExist:
                     phone = None  # or your default number
+                
+                
                 print("📞 Phone:", phone)
                 context['phone_prefill'] = phone[-4:] if phone else ''
                 # if request.user.is_authenticated:
@@ -3415,7 +3543,7 @@ def user_login1(request):
         elif step == 3:
             # Step 4 → Verify OTP from SMS/Email
             login_otp = request.POST.get('loginOtp')
-            session_login_otp = request.session.get('login_otp')  # OTP stored in session from step 0 or step 3
+            session_login_otp = request.session.get('mobile_otp')  # OTP stored in session from step 0 or step 3
             # session_email = request.session.get('login_email')
 
             if not email or not session_login_otp:
@@ -3442,7 +3570,7 @@ def user_login1(request):
 
                 return redirect('index')
             else:
-                messages.error(request, "Invalid OTP. Please try again. "+str(session_login_otp))
+                messages.error(request, "Invalid OTP. Please try again. ")
                 context['stepInput'] = 4
                 # context['step'] = 4  # Stay on the same step
                 return render(request, 'esign/login.html', context)
@@ -3450,3 +3578,25 @@ def user_login1(request):
 
     # GET request → default page
     return render(request, 'esign/login.html', context)
+
+@csrf_exempt
+def mark_viewed_ajax(request, token):
+    try:
+        flow = DocumentSignFlow.objects.get(token=token)
+
+        if not flow.is_viewed:
+            flow.is_viewed = True
+            flow.viewed_at = timezone.now()
+            flow.save()
+
+        # ✅ Only return simple types
+        return JsonResponse({
+            "success": True,
+            "message": "Viewed status updated",
+            "token": flow.token,
+            "is_viewed": flow.is_viewed,
+            "viewed_at": flow.viewed_at.strftime("%Y-%m-%d %H:%M:%S") if flow.viewed_at else None
+        })
+
+    except DocumentSignFlow.DoesNotExist:
+        return JsonResponse({"success": False, "message": "Invalid token"})

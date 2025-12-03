@@ -84,21 +84,21 @@
     <div class="col-12 col-md-auto mb-2 mb-md-0">
         <input type="text" name="document_title" class="form-control" placeholder="Document Title" value="{{ document_title }}">
     </div>
- <div class="col-12 col-md-auto mb-2 mb-md-0">
-  <select name="category" id="category" class="form-select">
-    <option value="">Select Category</option>
-    <option value="employment" {% if category == "employment" %}selected{% endif %}>Employment / HR</option>
-    <option value="legal" {% if category == "legal" %}selected{% endif %}>Legal / Compliance</option>
-    <option value="finance" {% if category == "finance" %}selected{% endif %}>Finance / Accounting</option>
-    <option value="sales" {% if category == "sales" %}selected{% endif %}>Sales / Marketing</option>
-    <option value="procurement" {% if category == "procurement" %}selected{% endif %}>Procurement / Operations</option>
-    <option value="government" {% if category == "government" %}selected{% endif %}>Government / Administrative</option>
-    <option value="education" {% if category == "education" %}selected{% endif %}>Education / Training</option>
-    <option value="healthcare" {% if category == "healthcare" %}selected{% endif %}>Healthcare / Medical</option>
-    <option value="it" {% if category == "it" %}selected{% endif %}>IT / Software</option>
-    <option value="misc" {% if category == "misc" %}selected{% endif %}>Miscellaneous / Personal</option>
-  </select>
-</div>
+<!-- <div class="col-12 col-md-auto mb-2 mb-md-0">-->
+<!--  <select name="category" id="category" class="form-select">-->
+<!--    <option value="">Select Category</option>-->
+<!--    <option value="employment" {% if category == "employment" %}selected{% endif %}>Employment / HR</option>-->
+<!--    <option value="legal" {% if category == "legal" %}selected{% endif %}>Legal / Compliance</option>-->
+<!--    <option value="finance" {% if category == "finance" %}selected{% endif %}>Finance / Accounting</option>-->
+<!--    <option value="sales" {% if category == "sales" %}selected{% endif %}>Sales / Marketing</option>-->
+<!--    <option value="procurement" {% if category == "procurement" %}selected{% endif %}>Procurement / Operations</option>-->
+<!--    <option value="government" {% if category == "government" %}selected{% endif %}>Government / Administrative</option>-->
+<!--    <option value="education" {% if category == "education" %}selected{% endif %}>Education / Training</option>-->
+<!--    <option value="healthcare" {% if category == "healthcare" %}selected{% endif %}>Healthcare / Medical</option>-->
+<!--    <option value="it" {% if category == "it" %}selected{% endif %}>IT / Software</option>-->
+<!--    <option value="misc" {% if category == "misc" %}selected{% endif %}>Miscellaneous / Personal</option>-->
+<!--  </select>-->
+<!--</div>-->
 
 
 
@@ -136,7 +136,7 @@
                                                 <th>Signing Progress</th>
                                                 <th>Sign Pending</th>
                                                 <th>Created at</th>
-                                                <th>Link Expired Date</th>
+                                                <!--<th>Link Expired Date</th>-->
                                                 <th>Final Status</th>
                                                 <!-- <th>Document Type</th> -->
                                                 <th class="text-end">Action</th>
@@ -190,8 +190,18 @@
                     {{ f.recipient_email|slice:":1"|upper }}
                 </span>
             </span>
-
+            
+        {% elif f.is_viewed %}
+            <!-- VIEWED -->
+            <span class="d-inline-block me-1 mb-1" 
+                  title="{{ f.recipient_email }} (Viewed)">
+                <span class="avatar-circle bg-info text-white fw-bold">
+                    {{ f.recipient_email|slice:":1"|upper }}
+                </span>
+            </span>
+        
         {% endif %}
+
 
     {% empty %}
         N/A
@@ -201,7 +211,7 @@
     <!-- Pending Users -->
 <td>
     {% for f in flows %}
-        {% if not f.is_signed and not f.is_canceled %}
+        {% if not f.is_signed and not f.is_canceled and not f.is_viewed %}
             <span class="d-inline-block me-1 mb-1" 
                   title="{{ f.recipient_email }} (Pending)">
                 <span class="avatar-circle bg-warning text-dark fw-bold">
@@ -216,7 +226,7 @@
 
 
 <td>{{ d.created_at }}</td>
-<td>{{ d.valid_until|date:"b d, Y"|title }} Midnight</td>
+<!--<td>{{ d.valid_until|date:"b d, Y"|title }} Midnight</td>-->
 
 
     <!-- Status -->
