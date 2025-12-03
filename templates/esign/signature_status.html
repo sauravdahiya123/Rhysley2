@@ -8,14 +8,14 @@
       <div class="table-responsive">
       <!-- Nav tabs -->
       <nav class="nav nav-pills nav-justified nav-tabs" id="signature-status-nav-tab" role="tablist">
-        <button class="nav-link active rounded-bottom-0 py-2" id="nav-document-drafts-tab" data-bs-toggle="tab" data-bs-target="#nav-document-drafts" type="button" role="tab" aria-controls="nav-document-drafts" aria-selected="true">
+        <!-- <button class="nav-link active rounded-bottom-0 py-2" id="nav-document-drafts-tab" data-bs-toggle="tab" data-bs-target="#nav-document-drafts" type="button" role="tab" aria-controls="nav-document-drafts" aria-selected="true">
           <div class="d-flex align-items-center justify-content-center">
             <i class="fas fa-pencil-alt me-3 fs-20 text-warning"></i>
             <div class="text-start"><span class="fs-18 fw-semibold text-warning">Drafts</span> <small class="d-block">{{ drafts.paginator.count }} Document</small></div>
           </div>
-        </button>
+        </button> -->
 
-        <button class="nav-link rounded-bottom-0 py-2" id="nav-document-action-required-tab" data-bs-toggle="tab" data-bs-target="#nav-document-action-required" type="button" role="tab" aria-controls="nav-document-action-required" aria-selected="false">
+        <button class="nav-link active rounded-bottom-0 py-2" id="nav-document-action-required-tab" data-bs-toggle="tab" data-bs-target="#nav-document-action-required" type="button" role="tab" aria-controls="nav-document-action-required" aria-selected="true">
           <div class="d-flex align-items-center justify-content-center">
             <i class="fas fa-info-circle me-3 fs-20 text-primary"></i>
             <div class="text-start"><span class="fs-18 fw-semibold text-primary">Action Required</span> <small class="d-block">{{ action_required.paginator.count }} Document</small></div>
@@ -39,7 +39,7 @@
     </div>
       <div class="tab-content border bg-light rounded-bottom" id="nav-tabContent">
         <!-- ----------------- DRAFTS TAB ----------------- -->
-        <div class="tab-pane fade active show" id="nav-document-drafts" role="tabpanel" aria-labelledby="nav-document-drafts-tab">
+        <div class="tab-pane fade" id="nav-document-drafts" role="tabpanel" aria-labelledby="nav-document-drafts-tab">
           <div class="card mb-0">
             <div class="card-header">
               <div class="card border-0 mb-0 shadow-none">
@@ -54,7 +54,7 @@
                   </div>
                   <div class="col-12 col-md-auto mb-2 mb-md-0">
                    <!--  <input type="text" name="drafts_category" placeholder="Category" class="form-control" value="{{ drafts_filters.category }}"> -->
-                    <select name="drafts_category" id="drafts_category" class="form-select">
+                    <!-- <select name="drafts_category" id="drafts_category" class="form-select">
     <option value="">Select Category</option>
     <option value="employment" {% if drafts_filters.category == "employment" %}selected{% endif %}>Employment / HR</option>
     <option value="legal" {% if drafts_filters.category == "legal" %}selected{% endif %}>Legal / Compliance</option>
@@ -66,7 +66,7 @@
     <option value="healthcare" {% if drafts_filters.category == "healthcare" %}selected{% endif %}>Healthcare / Medical</option>
     <option value="it" {% if drafts_filters.category == "it" %}selected{% endif %}>IT / Software</option>
     <option value="misc" {% if drafts_filters.category == "misc" %}selected{% endif %}>Miscellaneous / Personal</option>
-  </select>
+  </select> -->
 
                   </div>
                  
@@ -85,7 +85,7 @@
                 <table class="table mb-3 table-centered border-bottom table-hover">
                   <thead class="table-light">
                     <tr>
-                      <th>S. No.</th><th>Document Title</th><th>Category</th><th>Created at</th><th>Status</th><th>Document Type</th><th class="text-end">Action</th>
+                      <th>S. No.</th><th>Document Title</th><!-- <th>Category</th> --><th>Created at</th><th>Status</th><th>Document Type</th><th class="text-end">Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -93,7 +93,7 @@
                       <tr>
                         <td>{{ forloop.counter }}</td>
                         <td>{{ doc.title }}</td>
-                        <td>{{ doc.category }}</td>
+                        <!-- <td>{{ doc.category }}</td> -->
                        
                         <td>{{ doc.created_at|date:"M d, Y H:i" }}</td>
                         <td>{{ doc.status|title }}</td>
@@ -151,7 +151,7 @@
         </div>
 
         <!-- ----------------- ACTION REQUIRED TAB ----------------- -->
-        <div class="tab-pane fade" id="nav-document-action-required" role="tabpanel" aria-labelledby="nav-document-action-required-tab">
+        <div class="tab-pane fade active show" id="nav-document-action-required" role="tabpanel" aria-labelledby="nav-document-action-required-tab">
           <div class="card mb-0">
             <div class="card-header">
               <div class="card border-0 mb-0 shadow-none">
@@ -160,7 +160,7 @@
                   <div class="col-12 col-md-auto mb-2 mb-md-0"><input type="text" name="action_file_name" placeholder="Document Title" class="form-control" value="{{ action_filters.file_name }}"></div>
                   <div class="col-12 col-md-auto mb-2 mb-md-0">
                     <!-- <input type="text" name="action_category" placeholder="Category" class="form-control" value="{{ action_filters.category }}"> -->
-                    <select name="action_category" id="action_category" class="form-select">
+                    <!-- <select name="action_category" id="action_category" class="form-select">
     <option value="">Select Category</option>
     <option value="employment" {% if action_filters.category == "employment" %}selected{% endif %}>Employment / HR</option>
     <option value="legal" {% if action_filters.category == "legal" %}selected{% endif %}>Legal / Compliance</option>
@@ -172,7 +172,7 @@
     <option value="healthcare" {% if action_filters.category == "healthcare" %}selected{% endif %}>Healthcare / Medical</option>
     <option value="it" {% if action_filters.category == "it" %}selected{% endif %}>IT / Software</option>
     <option value="misc" {% if action_filters.category == "misc" %}selected{% endif %}>Miscellaneous / Personal</option>
-  </select>                  </div>
+  </select> -->                  </div>
 
                  
                   <div class="col-auto"><button type="submit" class="btn btn-primary">Search</button></div>
@@ -186,7 +186,7 @@
                 <table class="table mb-3 table-centered border-bottom table-hover">
                   <thead class="table-light">
                     <tr>
-                      <th>S. No.</th><th>Document Title</th><th>Category</th><th>Created at</th><th>Status</th><th>Document Type</th><th class="text-end">Action</th>
+                      <th>S. No.</th><th>Document Title</th><!-- <th>Category</th> --><th>Created at</th><th>Status</th><th>Document Type</th><th class="text-end">Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -194,7 +194,7 @@
                       <tr>
                         <td>{{ forloop.counter }}</td>
                         <td>{{ flow.document.title }}</td>
-                        <td>{{ flow.document.category|title }}</td>
+                        <!-- <td>{{ flow.document.category|title }}</td> -->
                         <!-- <td>{{ flow.document.owner.get_full_name }}</td> -->
                         <td>{{ flow.document.created_at|date:"M d, Y H:i" }}</td>
                         <td>{{ flow.document.status|title }}</td>
@@ -258,7 +258,7 @@
                   <div class="col-12 col-md-auto mb-2 mb-md-0"><input type="text" name="waiting_file_name" placeholder="Document Title" class="form-control" value="{{ waiting_filters.file_name }}"></div>
                   <div class="col-12 col-md-auto mb-2 mb-md-0">
                     <!-- <input type="text" name="waiting_category" placeholder="Category" class="form-control" value="{{ waiting_filters.category }}"> -->
-                   <select name="waiting_category" id="waiting_category" class="form-select">
+                   <!-- <select name="waiting_category" id="waiting_category" class="form-select">
     <option value="">Select Category</option>
     <option value="employment" {% if waiting_filters.category == "employment" %}selected{% endif %}>Employment / HR</option>
     <option value="legal" {% if waiting_filters.category == "legal" %}selected{% endif %}>Legal / Compliance</option>
@@ -270,7 +270,7 @@
     <option value="healthcare" {% if waiting_filters.category == "healthcare" %}selected{% endif %}>Healthcare / Medical</option>
     <option value="it" {% if waiting_filters.category == "it" %}selected{% endif %}>IT / Software</option>
     <option value="misc" {% if waiting_filters.category == "misc" %}selected{% endif %}>Miscellaneous / Personal</option>
-  </select>       </div>
+  </select> -->       </div>
 
                  
                   <div class="col-auto"><button type="submit" class="btn btn-primary">Search</button></div>
@@ -284,7 +284,7 @@
                 <table class="table mb-3 table-centered border-bottom table-hover">
                   <thead class="table-light">
                     <tr>
-                      <th>S. No.</th><th>Document Title</th><th>Category</th><th>Signers</th><th>Created at</th><th>Status</th><th>Document Type</th><th class="text-end">Action</th>
+                      <th>S. No.</th><th>Document Title</th><!-- <th>Category</th> --><th>Signers</th><th>Created at</th><th>Status</th><th>Document Type</th><th class="text-end">Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -292,52 +292,52 @@
                       <tr>
                         <td>{{ forloop.counter }}</td>
                         <td><span class="rounded-circle thumb-md me-1 d-inline"></span>{{ doc.title }}</td>
-                        <td>{{ doc.category }}</td>
+                        <!-- <td>{{ doc.category }}</td> -->
                        <td>
-  <div class="d-flex justify-content-center align-items-center">
-    {% for signer in doc.sign_flow.all|slice:":3" %}
-      <div class="position-relative" style="margin-left: {% if not forloop.first %}-10px{% else %}0{% endif %};">
-        <div class="thumb-md rounded-circle d-flex justify-content-center align-items-center text-white fw-bold" 
-             style="background-color:#0d6efd; border:2px solid #fff;"
-             data-bs-toggle="tooltip" 
-             title="{{ signer.recipient_email }}">
-          {{ signer.recipient_email|slice:":1"|upper }}
-        </div>
-      </div>
-    {% endfor %}
-    {% if doc.sign_flow.count > 3 %}
-      <div class="position-relative ms-1">
-        <span class="thumb-md shadow-sm d-flex justify-content-center align-items-center bg-info-subtle rounded-circle fw-semibold fs-6 border border-white"
-              data-bs-toggle="modal"
-              data-bs-target="#moreSignersModal-{{ doc.id }}">
-          +{{ doc.sign_flow.count|add:"-3" }}
-        </span>
-      </div>
-    {% endif %}
-  </div>
-</td>
-{% if doc.sign_flow.count > 3 %}
-<div class="modal fade" id="moreSignersModal-{{ doc.id }}" tabindex="-1" aria-labelledby="moreSignersModalLabel-{{ doc.id }}" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="moreSignersModalLabel-{{ doc.id }}">Additional Signers</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <ul class="list-group">
-          {% for signer in doc.sign_flow.all|slice:"3:" %}
-            <li class="list-group-item">{{ signer.recipient_email }}</li>
-          {% endfor %}
-        </ul>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-      </div>
-    </div>
-  </div>
-</div>
-{% endif %}
+                        <div class="d-flex justify-content-start align-items-center">
+                          {% for signer in doc.sign_flow.all|slice:":3" %}
+                            <div class="position-relative" style="margin-left: {% if not forloop.first %}-10px{% else %}0{% endif %};">
+                              <div class="thumb-md rounded-circle d-flex justify-content-center align-items-center text-white fw-bold" 
+                                   style="background-color:#0d6efd; border:2px solid #fff;"
+                                   data-bs-toggle="tooltip" 
+                                   title="{{ signer.recipient_email }}">
+                                {{ signer.recipient_email|slice:":1"|upper }}
+                              </div>
+                            </div>
+                          {% endfor %}
+                          {% if doc.sign_flow.count > 3 %}
+                            <div class="position-relative ms-1">
+                              <span class="thumb-md shadow-sm d-flex justify-content-center align-items-center bg-info-subtle rounded-circle fw-semibold fs-6 border border-white"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#moreSignersModal-{{ doc.id }}">
+                                +{{ doc.sign_flow.count|add:"-3" }}
+                              </span>
+                            </div>
+                          {% endif %}
+                        </div>
+                      </td>
+                        {% if doc.sign_flow.count > 3 %}
+                        <div class="modal fade" id="moreSignersModal-{{ doc.id }}" tabindex="-1" aria-labelledby="moreSignersModalLabel-{{ doc.id }}" aria-hidden="true">
+                          <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                              <div class="modal-header">
+                                <h5 class="modal-title" id="moreSignersModalLabel-{{ doc.id }}">Additional Signers</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                              </div>
+                              <div class="modal-body">
+                                <ul class="list-group">
+                                  {% for signer in doc.sign_flow.all|slice:"3:" %}
+                                    <li class="list-group-item">{{ signer.recipient_email }}</li>
+                                  {% endfor %}
+                                </ul>
+                              </div>
+                              <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        {% endif %}
 
                         <td>{{ doc.created_at|date:"M d, Y H:i" }}</td>
                         <td class="text-info fw-bold">In Progress</td>
@@ -500,7 +500,7 @@
                   <div class="col-12 col-md-auto mb-2 mb-md-0">
                     <!-- <input type="text" name="finalized_category" placeholder="Category" class="form-control" value="{{ finalized_filters.category }}"> -->
 
-                      <select name="finalized_filters" id="finalized_filters" class="form-control">
+                      <!-- <select name="finalized_filters" id="finalized_filters" class="form-control">
     <option value="">Select Category</option>
     <option value="employment" {% if finalized_filters.category == "employment" %}selected{% endif %}>Employment / HR</option>
     <option value="legal" {% if finalized_filters.category == "legal" %}selected{% endif %}>Legal / Compliance</option>
@@ -512,7 +512,7 @@
     <option value="healthcare" {% if finalized_filters.category == "healthcare" %}selected{% endif %}>Healthcare / Medical</option>
     <option value="it" {% if finalized_filters.category == "it" %}selected{% endif %}>IT / Software</option>
     <option value="misc" {% if finalized_filters.category == "misc" %}selected{% endif %}>Miscellaneous / Personal</option>
-  </select>   
+  </select>  -->  
                   </div>
                   <div class="col-12 col-md-auto mb-2 mb-md-0">
                     <!-- <input type="text" name="finalized_status" placeholder="Status" class="form-control" value="{{ finalized_filters.status }}"> -->
@@ -532,14 +532,14 @@
               <div class="table-responsive">
                 <table class="table mb-3 table-centered border-bottom table-hover">
                   <thead class="table-light">
-                    <tr><th>S. No.</th><th>Document Title</th><th>Category</th><th>Signers</th><th>Created at</th><th>Status</th><th>Document Type</th><th class="text-end">Action</th></tr>
+                    <tr><th>S. No.</th><th>Document Title</th><!-- <th>Category</th> --><th>Signers</th><th>Created at</th><th>Status</th><th>Document Type</th><th class="text-end">Action</th></tr>
                   </thead>
                   <tbody>
                     {% for doc in finalized %}
                       <tr>
                         <td>{{ forloop.counter }}</td>
                         <td>{{ doc.title }}</td>
-                        <td>{{ doc.category|title }}</td>
+                        <!-- <td>{{ doc.category|title }}</td> -->
                         <style>
                           .avatar-wrapper {
     position: relative;

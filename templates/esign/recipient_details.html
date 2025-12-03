@@ -8,10 +8,10 @@
     <div class="card shadow-sm p-4">
     <h3 class="mb-3 h4">Add Documents</h3>
 
-    <div id="containerBox" class="d-flex justify-content-between">
+    <div id="containerBox" class="d-flex justify-content-between flex-column flex-md-row">
         
         <!-- Preview Area -->
-        <div id="previewArea">
+        <div id="previewArea" class="mb-3 mb-md-0">
             <div id="loader" class="loader" style="display:none;"></div>
         </div>
 
@@ -85,7 +85,7 @@
                 1
             </div>
 
-            <div class="details-wrapper">
+            <div class="details-wrapper position-relative">
               <div class="row">
                 <div class="col-md-8">
                   <!-- NAME -->
@@ -137,11 +137,11 @@ attachKeyupValidationForEmail1();
                   </script>
                 </div>
                 <div class="col-md-2 offset-md-1">
-                  <div class="d-flex gap-3 mb-4 w-100">
+                  <div class="d-flex gap-3 mb-0 mb-md-4 mt-3 mt-md-0 w-100">
                       <select class="form-select" id="signUserActions_1" name="signUserActions_1" aria-label="Sign User Actions" required>
                         <option value="Needs to Sign">Needs to Sign</option>
-                        <option value="View Only">View Only</option>
                         <option value="Receives a Copy (CC)">Receives a Copy (CC)</option>
+                        <option value="Needs to View">Needs to View</option>
                     </select>
                     </div>
                 </div>
@@ -215,7 +215,7 @@ attachKeyupValidationForEmail1();
                 <option value="Every 7 Day">Every 7 Day</option>
             </select> </div>
             <div class="col-md-8 text-end">
-              <button class="btn btn-primary px-5 py-2" type="submit">
+              <button class="btn btn-primary px-5 py-2 mt-3 mt-md-0" type="submit">
                 Submit
             </button>
             </div>

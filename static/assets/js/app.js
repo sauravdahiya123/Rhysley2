@@ -49,23 +49,35 @@ try {
 
     });
 
+    // if (sidebarOverlay) {
+    //     sidebarOverlay.addEventListener('click', () => {
+    //         document.body.setAttribute("data-sidebar-size", "collapsed")
+    //     })
+    // }
+
+    // const changeSidebarSize = () => {
+    //     if (window.innerWidth >= 310 && window.innerWidth <= 1440) {
+    //         document.body.setAttribute("data-sidebar-size", "collapsed")
+    //     } else {
+    //         document.body.setAttribute("data-sidebar-size", "default")
+    //     }
+    // }
+
+    // window.addEventListener('resize', () => {
+    //     changeSidebarSize()
+    // })
+
+    // changeSidebarSize();
+
     if (sidebarOverlay) {
-        sidebarOverlay.addEventListener('click', () => {
-            document.body.setAttribute("data-sidebar-size", "collapsed")
-        })
-    }
+        // Always collapsed on load and resize
+        const changeSidebarSize = () => {
+            document.body.setAttribute("data-sidebar-size", "collapsed");
+        };
 
-    const changeSidebarSize = () => {
-        if (window.innerWidth >= 310 && window.innerWidth <= 1440) {
-            document.body.setAttribute("data-sidebar-size", "collapsed")
-        } else {
-            document.body.setAttribute("data-sidebar-size", "default")
-        }
+        window.addEventListener("resize", changeSidebarSize);
+        changeSidebarSize();
     }
-
-    window.addEventListener('resize', () => {
-        changeSidebarSize()
-    })
 
     changeSidebarSize();
 
