@@ -57,7 +57,9 @@
             if(x == 1){
             const selects = document.querySelectorAll("[id^='signUserActions_']");
             selects.forEach(sel => {
-                sel.setAttribute("disabled", true); // disable
+                // sel.setAttribute("disabled", true); // disable
+                    sel.style.display = "none";  // hide element
+
                 // sel.removeAttribute("disabled"); // enable
             });
 
@@ -65,7 +67,9 @@
             const selects = document.querySelectorAll("[id^='signUserActions_']");
             selects.forEach(sel => {
                 // sel.setAttribute("disabled", false); // disable
-                sel.removeAttribute("disabled"); // enable
+                // sel.removeAttribute("disabled"); // enable
+                    sel.style.display = "";  // hide element
+
             });
 
             }

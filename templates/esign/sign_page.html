@@ -286,19 +286,31 @@ document.addEventListener("DOMContentLoaded", function(){
 
     // 🔹 Check if user already accepted terms
     
-    fetch("/check-terms/")
-        .then(response => response.json())
-        .then(data => {
-            if (!data.accepted) {
-                // Show terms modal if not accepted yet
-                termsModal.show();
-            } else {
-                // If already accepted, load PDF directly
-                pdfContainer.classList.remove("blur-backdrop");
-                applyBtn.disabled = false;
-                loadPDF();
-            }
-        });
+    // fetch("/check-terms/")
+    //     .then(response => response.json())
+    //     .then(data => {
+    //         if (!data.accepted) {
+    //             // Show terms modal if not accepted yet
+    //             termsModal.show();
+    //         } else {
+    //             // If already accepted, load PDF directly
+    //             pdfContainer.classList.remove("blur-backdrop");
+    //             applyBtn.disabled = false;
+    //             loadPDF();
+    //         }
+    //     });
+const token = getTokenFromURL();
+const accepted = localStorage.getItem("accepted_terms_" + token);
+
+if (accepted !== "true") {
+    // Show modal if not accepted for THIS TOKEN in THIS browser
+    termsModal.show();
+} else {
+    pdfContainer.classList.remove("blur-backdrop");
+    applyBtn.disabled = false;
+    loadPDF();
+}
+
 
 
                 // termsModal.show();
@@ -325,6 +337,12 @@ document.addEventListener("DOMContentLoaded", function(){
     alert("Please check the box before proceeding.");
     return; // stop further execution
     }
+
+ const token = getTokenFromURL();
+
+    // Save in browser for this specific token
+    localStorage.setItem("accepted_terms_" + token, "true");
+
         fetch("/accept-terms/", {
             method: "POST",
             headers: {
@@ -894,6 +912,8 @@ document.getElementById("adoptSignBtn").addEventListener("click", function(){
                     currentBoxDiv.innerText = "";
                     currentBoxDiv.dataset.sigId = j.id; // also store in DOM
                         currentBoxDiv.style.opacity = "1";
+                        currentBoxDiv.style.borderColor = "black";
+
 
                 }
                  selectedSignature = { id: j.id, src: j.url };
@@ -928,7 +948,7 @@ document.getElementById("adoptSignBtn").addEventListener("click", function(){
                             box.style.backgroundPosition = "center";
                             box.innerText = ""; // remove text if any
                             box.style.opacity = "1";
-                                              box.style.borderColor = "red";
+                            box.style.borderColor = "black";
 
                             // div.setAttribute("data-signed", "true");
                         } else {
@@ -1148,7 +1168,7 @@ pdfjsLib.getDocument(pdfUrl).promise.then(pdf => {
                 div.style.backgroundPosition = "center";
                 div.innerText = "";
                 div.style.opacity = "1";
-                  // div.style.borderColor = "red";
+                  div.style.borderColor = "black";
 
                 return;
             }
@@ -1549,10 +1569,11 @@ function validateRequiredBoxes() {
         const isFilled = hasImage || isDateFilled;
 
         // Reset border color
-        box.style.borderColor = box.color || "#FF0000";
 
         if (!isFilled && !firstEmptyBox) {
             firstEmptyBox = box;
+                    box.style.borderColor = box.color || "#FF0000";
+
         }
     });
 
@@ -1619,91 +1640,186 @@ function initNextRequiredButton() {
     document.body.appendChild(nextBtn);
     nextBtn.addEventListener("click", scrollToNextRequired);
 }
-
+let lastOptionalBoxId = null; 
+let optionalVisitedOnce = false;
 
 function scrollToNextRequired() {
-    const container = document.getElementById("pdf-container"); // scrollable container
+    const container = document.getElementById("pdf-container");
     const boxes = Array.from(container.querySelectorAll(".sig-box-db"));
-
-
-
-    // const boxes = Array.from(container.querySelectorAll(".sig-box-db[data-required='true']"));
 
     if (!boxes.length) return;
 
-    // Remove previous highlight from all boxes
+    // Remove previous highlights
     boxes.forEach(box => {
-        box.style.borderColor = box.dataset.originalBorder || "#000"; // restore original
+        box.style.borderColor = box.dataset.originalBorder || "#000";
         box.style.opacity = box.dataset.originalOpacity || "1";
-        
-        // if (box.dataset.originalText) box.innerText = box.dataset.originalText;
-        
+
         const hasBgImage = box.style.backgroundImage && box.style.backgroundImage !== "none";
-    
-        // Only restore text if there is no background image
         if (!hasBgImage && box.dataset.originalText) {
             box.innerText = box.dataset.originalText;
         }
-    
     });
 
+    // --- CHECK FUTURE REQUIRED / OPTIONAL ---
+
+    function hasFutureUnfilledRequired(startIndex) {
+        for (let i = startIndex; i < boxes.length; i++) {
+            let b = boxes[i];
+            let isFilled = b.dataset.sigId || (b.style.backgroundImage && b.style.backgroundImage !== "none");
+            if (!isFilled && b.dataset.required === "true") return true;
+        }
+        return false;
+    }
+
+    function hasFutureUnfilledOptional(startIndex) {
+        for (let i = startIndex; i < boxes.length; i++) {
+            let b = boxes[i];
+            let isFilled = b.dataset.sigId || (b.style.backgroundImage && b.style.backgroundImage !== "none");
+            if (!isFilled && b.dataset.required !== "true") return true;
+        }
+        return false;
+    }
+
     let startIndex = currentIndex;
-    let found = false;
+    let foundBox = null;
 
     do {
         const box = boxes[currentIndex];
-        const type = box.dataset.boxType; // skip date boxes
+        const type = box.dataset.boxType;
         const isFilled = box.dataset.sigId || (box.style.backgroundImage && box.style.backgroundImage !== "none");
-            const hasBgImage = box.style.backgroundImage && box.style.backgroundImage !== "none";
+        const hasBgImage = box.style.backgroundImage && box.style.backgroundImage !== "none";
 
         if (type !== "date" && !isFilled) {
-            // Save original styles if not saved
+
+            const isRequired = box.dataset.required === "true";
+
+            // Save original
             if (!box.dataset.originalBorder) box.dataset.originalBorder = box.style.borderColor;
             if (!box.dataset.originalOpacity) box.dataset.originalOpacity = box.style.opacity;
-            // if (!box.dataset.originalText) box.dataset.originalText = box.innerText;
-             if (!hasBgImage && !box.dataset.originalText) {
-            box.dataset.originalText = box.innerText;
-        }
+            if (!hasBgImage && !box.dataset.originalText) {
+                box.dataset.originalText = box.innerText;
+            }
 
-            // Highlight only the current box
-            // box.style.borderColor = "red";
-             const isRequired = box.dataset.required === "true";
-
-            // Required → red border
+            // ---------------------------
+            // REQUIRED BOX FOUND
+            // ---------------------------
             if (isRequired) {
                 box.style.borderColor = "red";
                 box.style.opacity = "1";
-                            box.innerText = "Required";
-                            //   if (!box.dataset.originalText) box.dataset.originalText = box.innerText;
+                box.innerText = "Required";
+                lastOptionalBoxId = null;     // reset
+                optionalVisitedOnce = false;  // reset
 
-            } 
-            // Not required → grey border
-            else {
-                box.style.borderColor = "blue";
-                box.style.opacity = "0.7";
-                            box.innerText = "Optional";
-
+                foundBox = box;
+                break;
             }
-            box.style.opacity = "0.5";
 
-            // Scroll the container to the box
-            box.scrollIntoView({ behavior: "smooth", block: "center" });
+            // ---------------------------
+            // OPTIONAL BOX FOUND
+            // ---------------------------
+            box.style.borderColor = "blue";
+            box.style.opacity = "0.7";
+            box.innerText = "Optional";
 
-            found = true;
-            currentIndex = (currentIndex + 1) % boxes.length;
+            // CHECK: Are there future required or optional boxes?
+            const futureReq = hasFutureUnfilledRequired(currentIndex + 1);
+            const futureOpt = hasFutureUnfilledOptional(currentIndex + 1);
+
+            if (!futureReq && !futureOpt) {
+                // LAST BOX
+                if (lastOptionalBoxId === box.dataset.id) {
+                    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+
+                    const btn = document.getElementById("next-required-btn");
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.innerText = "All boxes checked";
+                    }
+                    return;
+                }
+
+                lastOptionalBoxId = box.dataset.id;
+            } else {
+                // More boxes exist → no bottom scroll
+                lastOptionalBoxId = box.dataset.id;
+            }
+
+            foundBox = box;
             break;
         }
 
         currentIndex = (currentIndex + 1) % boxes.length;
+
     } while (currentIndex !== startIndex);
 
-    if (!found) {
-        alert("All required boxes are filled!");
+    if (foundBox) {
+        foundBox.scrollIntoView({ behavior: "smooth", block: "center" });
+        currentIndex = (currentIndex + 1) % boxes.length;
     }
 }
 
 document.addEventListener("DOMContentLoaded", initNextRequiredButton);
 
+
+function getTokenFromURL() {
+    const parts = window.location.pathname.split("/");
+    return parts[2];
+}
+
+function startStatusWatcher(token) {
+    setInterval(() => {
+        fetch(`/status-check-document/${token}/`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.refresh) {
+                    location.reload();
+                }
+            });
+    }, 2000);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    const token = getTokenFromURL();
+    startStatusWatcher(token);
+});
+
+
+
+
+
+</script>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<meta name="csrf-token" content="{{ csrf_token }}">
+
+<script>
+$(document).ready(function() {
+    // CSRF token
+    const csrftoken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    // URL se token uthana
+    // Example URL: /sign/<token>/<email_encoded>/
+    const pathParts = window.location.pathname.split('/');
+    const token = pathParts[2]; // 0: '', 1: 'sign', 2: <token>, 3: <email_encoded>
+
+    if (token) {
+        $.ajax({
+            url: `/view-status/${token}/`,
+            type: "POST",
+            headers: { "X-CSRFToken": csrftoken },
+            success: function(res) {
+                if (res.success) {
+                    console.log("Viewed status updated:", res.is_viewed, res.viewed_at);
+                } else {
+                    console.warn(res.message);
+                }
+            },
+            error: function(err) {
+                console.error("Error marking viewed", err);
+            }
+        });
+    }
+});
 </script>
 {% endif %}
 

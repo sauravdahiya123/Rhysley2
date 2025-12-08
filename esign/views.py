@@ -138,6 +138,9 @@ def recipient_details(request):
                 owner=request.user,
                 title=uploaded_file.name,
                 status="pending",
+                subject=subject,
+                sign_order_enabled = sign_order_enabled == "in_order",
+                message=message,
                 file=uploaded_file,  # <--- this saves the actual file
 
             )
@@ -185,7 +188,8 @@ def recipient_details(request):
                 role=role,
                 order=order_value,
                 assigned_at=timezone.now(),
-                token=token
+                token=token,
+                 is_viewed=False
             )
             expires = timezone.now() + timedelta(days=7)
             SigningToken.objects.create(document=document, token=token, expires_at=expires)
@@ -200,6 +204,7 @@ def recipient_details(request):
 
             index += 1
         # return JsonResponse({'ok': action, 'error': 'POST only'}, status=405)
+        # return JsonResponse({"error": saved_recipients}, status=500)
 
         print("saved_recipients",saved_recipients)
         # ---------------------------
@@ -228,7 +233,7 @@ def recipient_details(request):
         return render(request, 'esign/document_detail.html', {
             'document': doc,
             'flows': flows,              # <-- yaha add karo
-                'emails': emails,   # <-- ADD THIS
+            'emails': emails,   # <-- ADD THIS
 
             'signatures': [],
             'placements': [],
@@ -931,11 +936,15 @@ def document_list(request):
     if hasattr(docs, 'order_by'):
         docs = docs.order_by('-created_at')
 
+    for d in docs:
+        d.show_edit = any(not f.is_viewed for f in d.sign_flow.all())
+
+
     # Pagination
     paginator = Paginator(docs, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-
+    
     context = {
         'documents': page_obj,
         'doc_id': doc_id,
@@ -1487,6 +1496,11 @@ def sign_document(request, token, encoded_email=None):
         return render(request, 'esign/token_invalid.html', {
             "message": "You are not authorized to sign this document."
         })
+    
+    if doc.is_editable:
+        return render(request, 'esign/token_invalid.html', {
+            "message": "This document is not editable at the moment."
+        })
 
     # # Already signed check
     # invalid_states = {
@@ -1593,6 +1607,10 @@ def sign_document(request, token, encoded_email=None):
         'required'
     )
     )
+
+    # return JsonResponse({"error": signature_boxes}, status=400)
+
+
 
     # Signing order checks
     previous_users = DocumentSignFlow.objects.filter(
@@ -2245,7 +2263,9 @@ def assign_document(request, token):
             recipient_name=name,
             recipient_email=email,
             order=st.order,
-            role='Signer'
+            role='Signer',
+            is_viewed=False
+
         )
 
         # Link original flow to new assigned flow
@@ -3487,7 +3507,8 @@ def user_login1(request):
                     phone = None  # or your default number
                 print("📞 Phone:", phone)
 
-                if phone:
+                # if phone:
+                if 1 != 1:
                     # Password correct, user has phone number → continue verification
                     context['stepInput'] = 3
                     context['phone_prefill'] = phone[-4:]  # last 4 digits
@@ -3600,3 +3621,427 @@ def mark_viewed_ajax(request, token):
 
     except DocumentSignFlow.DoesNotExist:
         return JsonResponse({"success": False, "message": "Invalid token"})
+    
+
+def check_flow_status(request, token):
+    from django.db.models import Q
+
+    # Query me hi conditions laga di
+    flow = DocumentSignFlow.objects.filter(
+        Q(token=token) &
+        (
+            Q(is_signed=True) |
+            Q(is_canceled=True) |
+            # Q(is_viewed=True) |
+            ~Q(assigned_by=None)  # assigned_by NOT NULL
+        )
+    ).exists()
+
+    return JsonResponse({
+        "refresh": flow   # True → page reload
+    })
+
+
+import re
+from django.db import transaction
+
+EMAIL_RE = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+
+
+def edit_document(request, pk):
+    document = get_object_or_404(Document, pk=pk)
+    document.is_editable = True
+    document.save()
+    if request.method == "POST":
+        # Collect basic fields
+       
+        
+        subject = request.POST.get("subject", "").strip()
+        message = request.POST.get("message", "").strip()
+        reminder = request.POST.get("reminder_frequency", "").strip()
+        sign_order_option = request.POST.get("signOrderOption", "")  # expect "in_order" or "order"
+
+        sign_order_enabled = (sign_order_option == "in_order")  # matches your radio logic
+
+        # Validate subject/message minimal
+        errors = {}
+        if not subject:
+            errors['subject'] = "Subject is required."
+        if not message:
+            errors['message'] = "Message is required."
+
+        # Gather recipients
+        recipients = []
+        idx = 1
+        seen_emails = set()
+        while True:
+            name_key = f"name_{idx}"
+            email_key = f"email_{idx}"
+            action_key = f"signUserActions_{idx}"
+
+            if name_key not in request.POST:
+                break
+
+            name = request.POST.get(name_key, "").strip()
+            email = request.POST.get(email_key, "").strip()
+            action = request.POST.get(action_key, "").strip() or "Needs to Sign"
+            seen_emails.add(email)
+
+            recipients.append({
+                "name": name,
+                "email": email,
+                "action": action,
+                "order": idx if sign_order_enabled else 1
+            })
+
+            idx += 1
+
+     
+        uploaded_file = request.FILES.get("file", None)
+        if uploaded_file:
+            if uploaded_file.content_type != "application/pdf":
+                errors['file'] = "Only PDF files are allowed."
+            max_size = 100 * 1024 * 1024
+            if uploaded_file.size > max_size:
+                errors['file'] = "File size should not exceed 100 MB."
+
+
+        try:
+
+
+
+            with transaction.atomic():
+                # return JsonResponse({"error": document.reminder_frequency}, status=500)
+
+                # Update document fields
+                document.subject = subject
+                document.message = message
+                # document.reminder_frequency = reminder
+                document.sign_order_enabled = sign_order_enabled
+
+                if uploaded_file:
+                    # document.file.delete(save=False)  # remove old file (optional)
+                    document.file = uploaded_file
+
+                document.save()
+                document.sign_flow.all().delete()
+                # return JsonResponse({"error": recipients}, status=500)
+
+                # Create new flows
+                new_flows = []
+                document = get_object_or_404(Document, pk=pk)
+
+                for r in recipients:
+                    token = secrets.token_hex(32)  # unique token
+                    if r["action"]  == "Needs to Sign":
+                        role = "signer"
+                    elif r["action"]  == "Receives a Copy (CC)":
+                        role = "cc"
+                    else:
+                        role = "viewer"  # default
+                    # return JsonResponse({"error": document.pk}, status=500)
+
+
+                    # role = "signer" if r["action"] == "Needs to Sign" else "viewer"
+                    # new_flows.append(DocumentSignFlow(
+                    #     document=document,
+                    #     token=token,
+                    #     recipient_name=r["name"],
+                    #     recipient_email=r["email"],
+                    #     role=role,
+                    #     order=r["order"]
+                    # ))
+
+                    flow = DocumentSignFlow.objects.create(
+                        document=document,
+                        token=token,
+                        recipient_name=r["name"],
+                        recipient_email=r["email"],
+                        role=role,
+                        order=r["order"],
+                         is_viewed=False
+                    )
+                    new_flows.append({
+                        "id": flow.id,
+                        "document_id": flow.document.id,
+                        "token": flow.token,
+                        "recipient_name": flow.recipient_name,
+                        "recipient_email": flow.recipient_email,
+                        "role": flow.role,
+                        "order": flow.order
+                    })
+                                
+
+                    # return JsonResponse({"error": new_flows}, status=500)
+
+                # DocumentSignFlow.objects.bulk_create(new_flows)
+                # return JsonResponse({"error": new_flows}, status=500)
+
+            messages.success(request, "Document updated successfully.")
+            return redirect('edit_signing_link', pk=pk)  # redirect to edit signature page
+
+            # return redirect('document_list')  # change destination as desired
+        except Exception as e:
+            # log the exception in real app
+            messages.error(request, f"Failed to update document: {str(e)}")
+            context = {
+                'document': document,
+                'errors': {'exception': str(e)},
+                'recipients_post': recipients,
+                'subject': subject,
+                'message': message,
+                'reminder_frequency': reminder,
+                'sign_order_enabled': sign_order_enabled,
+            }
+            return render(request, "esign/edit_document.html", context)
+
+    # GET -> prepare initial recipients data for the template
+    
+    initial_recipients = []
+    signed_recipients = document.sign_flow.filter()
+
+
+    for r in signed_recipients:
+        initial_recipients.append({
+            "name": r.recipient_name,
+            "email": r.recipient_email,
+            "action": r.role,
+            "order": r.order
+        })
+    # return JsonResponse({"error": initial_recipients}, status=500)
+
+
+    context = {
+        'document': document,
+        'recipients_initial': initial_recipients,
+        'subject': document.subject,
+        'message': document.message,
+        'reminder_frequency': document.reminder_frequency,
+        'sign_order_enabled': document.sign_order_enabled,
+        'errors': {}
+    }
+    messages.success(request, "All old links are now expired. Please continue to new link send")
+    return render(request, "esign/edit_document.html", context)
+
+
+@login_required
+def edit_signing_page(request, pk):
+    document = get_object_or_404(Document, pk=pk)
+
+    # Load existing boxes for this document
+    # boxes = SignatureBox.objects.filter(document=document)
+    # पहले उस document के सभी recipient emails निकालो
+    flow_emails = DocumentSignFlow.objects.filter(document=document).values_list('recipient_email', flat=True)
+
+    # अब सिर्फ उन्हीं boxes को निकालो जिनका assigned_email flow_emails में है
+    boxes = SignatureBox.objects.filter(document=document, assigned_email__in=flow_emails)
+
+    # Prepare boxes JSON to inject into JS
+    boxes_data = []
+    for b in boxes:
+        boxes_data.append({
+            "id": b.id,
+            "page": b.page,
+            "x": float(b.x),
+            "y": float(b.y),
+            "width": float(b.width),
+            "height": float(b.height),
+            "type": b.type,
+            "rotation": b.rotation,
+            "fontFamily": b.font_family,
+            "fontSize": b.font_size,
+            "color": b.color,
+            "fontWeight": b.font_weight,
+            "fontStyle": b.font_style,
+            "textDecoration": b.text_decoration,
+            "assigned_email": b.assigned_email,
+            "required": b.required
+        })
+
+    # Also pass recipient emails for pairing
+                    # document.sign_flow.all().delete()
+
+    flows = document.sign_flow.all()  # adjust based on your model
+    emails = [f.recipient_email for f in flows]
+
+    context = {
+        "document": document,
+        "boxes_json": json.dumps(boxes_data),
+        "emails": json.dumps(emails),
+        "signing_users":emails
+    }
+
+    # return JsonResponse({"error": boxes_data}, status=500)
+
+
+    return render(request, 'esign/edit_signing_page.html', context)
+
+
+@login_required
+def update_signing_link(request, pk):
+    document = get_object_or_404(Document, pk=pk)
+    raw_data = request.POST.get("boxes", "")
+
+    try:
+        data = json.loads(raw_data)
+    except:
+        return JsonResponse({"error": "Invalid JSON format"}, status=400)
+
+    boxes = data.get("boxes", [])
+    # return JsonResponse({"error": boxes}, status=400)
+
+    for b in boxes:
+        print("Saurav")
+        box_id = b.get("box_id")
+        # box_id = ""
+        if box_id and not box_id.startswith("new-"):
+            box = SignatureBox.objects.filter(pk=box_id).first()
+            if box:
+                box.page = b.get("page")
+                box.x = float(b.get("x"))
+                box.y = float(b.get("y"))
+                box.width = float(b.get("width"))
+                box.height = float(b.get("height"))
+                box.type = b.get("type")
+                box.rotation = b.get("rotation", 0)
+                box.color = b.get("color", "#000000")
+                box.font_family = b.get("fontFamily", "Arial")
+                box.font_size = b.get("fontSize", 10)
+                box.font_weight = b.get("fontWeight", "normal")
+                box.font_style = b.get("fontStyle", "normal")
+                box.text_decoration = b.get("textDecoration", "none")
+                box.assigned_email = b.get("assigned_email", None)
+                box.required = b.get("required", False)
+                box.save()
+        else:
+            SignatureBox.objects.create(
+                document=document,
+                page=b.get("page"),
+                x=float(b.get("x")),
+                y=float(b.get("y")),
+                width=float(b.get("width")),
+                height=float(b.get("height")),
+                type=b.get("type"),
+                rotation=b.get("rotation", 0),
+                color=b.get("color", "#000000"),
+                font_family=b.get("fontFamily", "Arial"),
+                font_size=b.get("fontSize", 10),
+                font_weight=b.get("fontWeight", "normal"),
+                font_style=b.get("fontStyle", "normal"),
+                text_decoration=b.get("textDecoration", "none"),
+                assigned_email=b.get("assigned_email", None),
+                required=b.get("required", False)
+            )
+
+
+    
+
+    merged_path = merge_boxes_to_pdf(document, boxes)
+
+    # Get only flows with order = 1 for this document
+    flows = DocumentSignFlow.objects.filter(document=document,order=1)
+    # print("flows",flows.token)
+    for flow in flows:
+        print("flows",flow.token)
+
+        # Generate signing URL using the unique token
+        encoded_email = urlsafe_base64_encode(force_bytes(flow.recipient_email))
+        sign_url = request.build_absolute_uri(reverse('sign_document', args=[flow.token,encoded_email]))
+    
+        # sign_url = request.build_absolute_uri(f'/document/sign/{flow.token}/')
+
+        # Render email content
+        html_content = render_to_string('mails/email_template_sign_request.html', {
+            'doc_title': flow.document.title,
+            'sign_url': sign_url,
+            'name': flow.recipient_name
+        })
+
+        # Compose sender display name
+        auth_user = request.user.get_full_name() or request.user.first_name
+        display_name = f"{auth_user} Via Eazeesign"
+
+        # Send email
+        email_sent = send_email_safe(
+            request,
+            subject=f"Complete with Eazeesign: {flow.document.title}",
+            body=html_content,
+            recipient_list=[flow.recipient_email],
+            from_email=f"{display_name} <{settings.DEFAULT_FROM_EMAIL}>"
+        )
+
+        if not email_sent:
+            return redirect(f'/document/{pk}/')
+
+            print(f"[ERROR] Failed to send email to {flow.recipient_email}")
+    messages.success(request, "Link sent successfully!")  # ✅ set success message
+    return redirect('document_list')
+
+
+
+
+@login_required
+def cancel_document(request, pk):
+    document = get_object_or_404(Document, pk=pk, owner=request.user)
+
+    flows = document.sign_flow.all()
+
+    # # Check if already canceled
+    # if document.is_canceled:
+    #     return JsonResponse({
+    #         "success": False,
+    #         "message": "Document is already cancelled."
+    #     })
+
+    # Check if any receiver already signed
+    if flows.filter(is_viewed=True).exists():
+        return JsonResponse({
+            "success": False,
+            "message": "Cannot cancel because at least one receiver has already signed."
+        })
+
+    # Mark as canceled
+    document.is_canceled = True
+    document.status = "cancelled"  # optional but recommended
+    document.save()
+
+    data = json.loads(request.body.decode('utf-8'))
+    reason = data.get("reason", "")
+    # Send emails to all receivers
+    for f in flows:
+
+        try:
+            subject = (
+                f"Document Cancelled: The document '{document.title}' "
+                f"has been cancelled by {request.user.get_full_name() or request.user.email}"
+            )
+
+            html_content = render_to_string(
+                'mails/document_cancelled_to_sign_email.html',
+                {
+                    'recipient_name': f.recipient_name,  # signer ka naam
+                    'assigner_name': request.user.get_full_name() or request.user.email,  # cancel karne wala
+                    'document_title': document.title,
+                    'site_url': settings.SITE_URL,
+                    'reason': reason if reason else "No reason provided"
+                }
+            )
+
+            display_name = "Eazeesign Via Eazeesign"
+
+            send_email_safe(
+                request,
+                subject=subject,
+                body=html_content,
+                recipient_list=[f.recipient_email],
+                from_email=f"{display_name} <{settings.DEFAULT_FROM_EMAIL}>"
+            )
+
+        except Exception as e:
+            print(f"Email sending failed: {e}")
+    
+
+    return JsonResponse({
+        "success": True,
+        "message": "Document cancelled and all receivers notified."
+    })

@@ -70,14 +70,23 @@ class Document(models.Model):
     ]
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='documents')
     title = models.CharField(max_length=250)
+    subject = models.CharField(max_length=250)
+    message = models.TextField()
+    reminder_frequency = models.PositiveIntegerField(
+        null=True,   # DB me NULL allow karega
+        blank=True   # form/admin me blank allow karega
+    )
     file = models.FileField(upload_to=upload_doc_path)
     created_at = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     merged_file = models.FileField(upload_to='merged/', null=True, blank=True)
     is_template = models.BooleanField(default=False)
+    sign_order_enabled = models.BooleanField(default=False)
     category = models.CharField(max_length=50, choices=TEMPLATE_CATEGORIES, default='misc')
     favorite_by = models.ManyToManyField(User, related_name='favorite_templates', blank=True)
     template_id = models.CharField(max_length=150, blank=True, null=True)
+    is_editable = models.BooleanField(default=False)  # new field
+    is_canceled = models.BooleanField(default=False)   # NEW FIELD
     valid_until = models.DateTimeField(
     null=True, 
     blank=True, 
@@ -154,9 +163,11 @@ class SignaturePage(models.Model):
 
 class DocumentSignFlow(models.Model):
     ROLE_CHOICES = (
-        ("signer", "Signer"),   # ✅ Can sign
-        ("viewer", "Viewer"),   # ✅ Can only read
+    ("signer", "Signer"),
+    ("viewer", "Viewer"),
+    ("cc", "CC"),  # new option
     )
+
     document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='sign_flow')
     token = models.CharField(max_length=64, unique=True)  # unique token per recipient
     recipient_name = models.CharField(max_length=255, blank=True, null=True)

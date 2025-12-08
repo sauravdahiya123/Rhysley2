@@ -1,0 +1,495 @@
+{# templates/esign/edit_document.html #}
+{% extends "esign/base_header.html" %}
+{% block content %}
+<style>
+    #previewArea{
+    opacity: 1 !important;
+    margin-right: 20px;
+  }
+    #previewArea iframe{
+    display: block !important;
+  }
+</style>
+
+{% if messages %}
+  <div class="d-flex justify-content-center mt-3">
+    {% for message in messages %}
+      {% if forloop.last %}
+        <div id="autoDismissAlert" class="alert alert-{{ message.tags }} alert-dismissible fade show text-center" role="alert" style="min-width: 300px;">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+
+  <!-- <script>
+    setTimeout(() => {
+      const alert = document.getElementById('autoDismissAlert');
+      if (alert) {
+        const bsAlert = new bootstrap.Alert(alert);
+        bsAlert.close();
+      }
+    }, 2000); // 2 seconds
+  </script> -->
+{% endif %}
+
+
+<form class="form" action="{% url 'edit_document' document.pk %}" method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+
+<div class="container py-2">
+    <div class="card shadow-sm p-4">
+    <h3 class="mb-3 h4">Edit Document</h3>
+
+    <div id="containerBox" class="d-flex justify-content-between flex-column flex-md-row">
+
+        <!-- Preview Area -->
+        <div id="previewArea" class="mb-3 mb-md-0" style="min-width:300px; min-height:200px;">
+            {% if document.file %}
+                <div class="preview-card">
+                    <div class="preview-thumb" style="height:200px; overflow:hidden">
+                        <iframe src="{{ document.file.url }}" style="width:100%; height:200px; border:0;"></iframe>
+                    </div>
+                    <!-- <div style="padding:12px;">
+                        <strong>{{ document.file.name|default:document.file.url }}</strong><br>
+                        {% comment %} no easy page count server-side; leave it {% endcomment %}
+                    </div> -->
+                </div>
+            {% else %}
+                <div class="text-muted">No file yet. Upload a PDF to preview.</div>
+            {% endif %}
+            {% if errors.file %}
+                <div class="text-danger small mt-1">{{ errors.file }}</div>
+            {% endif %}
+        </div>
+
+        <!-- Dropzone Box -->
+        <div id="dropzone" class="dropzone flex-grow-1 p-4 border rounded">
+            <p class="mb-3 fw-bold">Drop your files here or</p>
+
+            <button disabled  id="uploadBtn" type="button" class="btn btn-primary px-5 py-2">
+                Upload
+            </button>
+            
+            <input type="file" disabled name="file" id="pdfInput" style="opacity:0; width:1px; height:1px;" accept="application/pdf">
+            <div class="small text-muted mt-2">Only PDF. Max 100 MB.</div>
+        </div>
+
+    </div>
+</div>
+</div>
+
+
+<!-- RECIPIENT SECTION -->
+<div class="container mb-4">
+
+    <h3 class="mb-3 h4">Recipients</h3>
+
+    <!-- RADIO -->
+    <div class="mb-4 d-flex align-items-center gap-4">
+        <div class="form-check">
+            <input class="form-check-input" onclick="s(0)"  value="in_order" type="radio" name="signOrderOption" id="radioOrder" {% if sign_order_enabled %}checked{% endif %}>
+            <label class="form-check-label" for="radioOrder">In Order</label>
+        </div>
+
+        <div class="form-check">
+            <input class="form-check-input" onclick="s(1)" value="order" type="radio" name="signOrderOption" id="radioInOrder" {% if not sign_order_enabled %}checked{% endif %}>
+            <label class="form-check-label" for="radioInOrder" >Order</label>
+        </div>
+    </div>
+
+    <script>
+        function s(x){
+            const selects = document.querySelectorAll("[id^='signUserActions_']");
+            if(x == 1){
+                selects.forEach(sel => { sel.style.display = "none"; });
+            } else {
+                selects.forEach(sel => { sel.style.display = ""; });
+            }
+        }
+    </script>
+
+    <div id="recipientsContainer">
+        {# Render existing recipients server-side so JS can clone from first element #}
+        {% if recipients_initial %}
+            {% for r in recipients_initial %}
+                <div class="recipientBox border rounded p-4 mb-2 position-relative" data-recipient>
+                    <div class="orderNumber bg-info text-white px-3 py-4 position-absolute top-50 translate-middle-y start-0 fs-4 fw-bold" contenteditable="false" style="display: {% if sign_order_enabled %}flex{% else %}none{% endif %};">
+                        {{ forloop.counter }}
+                    </div>
+
+                    <div class="details-wrapper position-relative" style="margin-left: {% if sign_order_enabled %}80px{% else %}0{% endif %};">
+                      <div class="row">
+                        <div class="col-md-8">
+                          <!-- NAME -->
+                          <div class="mb-3">
+                              <label class="form-label" for="name_{{ forloop.counter }}">Name <span class="text-danger">*</span></label>
+                              <input type="text" class="form-control" id="name_{{ forloop.counter }}" name="name_{{ forloop.counter }}" placeholder="Enter name" required value="{{ r.name|escape }}">
+                          
+                          </div>
+
+                          <!-- EMAIL -->
+                          <div class="mb-0">
+                              <label class="form-label" for="email_{{ forloop.counter }}">Email <span class="text-danger">*</span></label>
+                              <input type="email" class="form-control" id="email_{{ forloop.counter }}" name="email_{{ forloop.counter }}" placeholder="Enter email" required value="{{ r.email|escape }}">
+                              <small id="emailError_{{ forloop.counter }}" class="text-danger mt-1 d-block"></small>
+                          </div>
+                        </div>
+
+                        <div class="col-md-2 offset-md-1">
+                          <div class="d-flex gap-3 mb-0 mb-md-4 mt-3 mt-md-0 w-100">
+                              <select hidden class="form-select" id="signUserActions_{{ forloop.counter }}" name="signUserActions_{{ forloop.counter }}" aria-label="Sign User Actions" required style="display: {% if sign_order_enabled %}block{% else %}none{% endif %};">
+                                <option value="Needs to Sign" {% if r.action == "Needs to Sign" %}selected{% endif %}>Needs to Sign</option>
+                                <option value="Receives a Copy (CC)" {% if r.action == "cc" %}selected{% endif %}>Receives a Copy (CC)</option>
+                                <option value="Needs to View" {% if r.action == "viewer" %}selected{% endif %}>Needs to View</option>
+                            </select>
+                            </div>
+                        </div>
+
+                        <div class="col-md-1 text-end">
+                          <!-- DELETE BTN -->
+                          <button hidden type="button" class="btn btn-danger deleteRecipientBtn">
+                              <i class="far fa-trash-alt"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            {# Render a single empty template when no recipients found #}
+            <div class="recipientBox border rounded p-4 mb-2 position-relative" data-recipient>
+                <div class="orderNumber bg-info text-white px-3 py-4 position-absolute top-50 translate-middle-y start-0 fs-4 fw-bold" contenteditable="false" style="display: {% if sign_order_enabled %}flex{% else %}none{% endif %};">1</div>
+
+                <div class="details-wrapper position-relative" style="margin-left: {% if sign_order_enabled %}80px{% else %}0{% endif %};">
+                  <div class="row">
+                    <div class="col-md-8">
+                      <div class="mb-3">
+                          <label class="form-label" for="name_1">Name <span class="text-danger">*</span></label>
+                          <input type="text" class="form-control" id="name_1" name="name_1" placeholder="Enter name" required>
+                      </div>
+
+                      <div class="mb-0">
+                          <label class="form-label" for="email_1">Email <span class="text-danger">*</span></label>
+                          <input type="email" class="form-control" id="email_1" name="email_1" placeholder="Enter email" required>
+                          <small id="emailError_1" class="text-danger mt-1 d-block"></small>
+                      </div>
+                    </div>
+
+                    <div class="col-md-2 offset-md-1">
+                      <div class="d-flex gap-3 mb-0 mb-md-4 mt-3 mt-md-0 w-100">
+                          <select  class="form-select" id="signUserActions_1" name="signUserActions_1" aria-label="Sign User Actions" required style="display: {% if sign_order_enabled %}block{% else %}none{% endif %};">
+                            <option value="Needs to Sign">Needs to Sign</option>
+                            <option value="Receives a Copy (CC)">Receives a Copy (CC)</option>
+                            <option value="Needs to View">Needs to View</option>
+                        </select>
+                        </div>
+                    </div>
+
+                    <div class="col-md-1 text-end">
+                      <button type="button" class="btn btn-danger deleteRecipientBtn">
+                          <i class="far fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <button id="addRecipientBtn" hidden type="button" class="btn btn-primary">+ Add Recipient</button>
+</div>
+
+<!-- MESSAGE SECTION -->
+<div class="container my-3">
+    <div class="accordion" id="accordionExample">
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="headingOne">
+            <button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne">
+                Add Message
+            </button>
+            </h2>
+
+            <div id="collapseOne" class="accordion-collapse collapse show">
+            <div class="accordion-body">
+
+                <!-- SUBJECT -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <label class="form-label">Subject <span class="text-danger">*</span></label>
+                        <div id="subjectCount" class="small text-muted">0/100</div>
+                    </div>
+                    <input type="text" required name="subject" id="subjectInput" class="form-control" maxlength="100" placeholder="Enter subject" value="{{ subject|default:'' }}">
+                    {% if errors.subject %}
+                        <div class="text-danger small mt-1">{{ errors.subject }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- MESSAGE -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <label class="form-label">Message <span class="text-danger">*</span></label>
+                        <div id="messageCount" class="small text-muted">0/1000</div>
+                    </div>
+                    <textarea name="message" required id="messageInput" class="form-control" rows="5" maxlength="1000" placeholder="Enter message">{{ message|default:'' }}</textarea>
+                    {% if errors.message %}
+                        <div class="text-danger small mt-1">{{ errors.message }}</div>
+                    {% endif %}
+                </div>
+
+            </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container mb-5">
+    <div class="row">
+        <div class="col-md-4">
+            <label for="frequencyReminders" class="form-label">Frequency of reminders</label>
+            <select class="form-select" name="reminder_frequency" id="reminderInput" aria-label="Default select example">
+                <option value="" {% if not reminder_frequency %}selected{% endif %}>Choose a reminders frequency</option>
+                <option value="Every Day" {% if reminder_frequency == "Every Day" %}selected{% endif %}>Every Day</option>
+                <option value="Every 2 Day" {% if reminder_frequency == "Every 2 Day" %}selected{% endif %}>Every 2 Day</option>
+                <option value="Every 3 Day" {% if reminder_frequency == "Every 3 Day" %}selected{% endif %}>Every 3 Day</option>
+                <option value="Every 4 Day" {% if reminder_frequency == "Every 4 Day" %}selected{% endif %}>Every 4 Day</option>
+                <option value="Every 5 Day" {% if reminder_frequency == "Every 5 Day" %}selected{% endif %}>Every 5 Day</option>
+                <option value="Every 6 Day" {% if reminder_frequency == "Every 6 Day" %}selected{% endif %}>Every 6 Day</option>
+                <option value="Every 7 Day" {% if reminder_frequency == "Every 7 Day" %}selected{% endif %}>Every 7 Day</option>
+            </select> </div>
+            <div class="col-md-8 text-end">
+              <button class="btn btn-primary px-5 py-2 mt-3 mt-md-0" type="submit">
+                Save Changes
+            </button>
+            </div>
+    </div>
+</div>
+
+</form>
+
+<!-- PDF.js ES5 build (REQUIRED) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.mjs" type="module"></script>
+
+<script type="module">
+import * as pdfjsLib from "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.mjs";
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.mjs";
+
+// generate thumbnail (optional) — used only when user uploads a new file
+async function generateThumbnail(file) {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const page = await pdf.getPage(1);
+    const viewport = page.getViewport({ scale: 0.4 });
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+    return { canvas, pageCount: pdf.numPages };
+}
+</script>
+
+<script>
+/* ---------- Dropzone + preview ---------- */
+const containerBox = document.getElementById("containerBox");
+const dropzone = document.getElementById("dropzone");
+const pdfInput = document.getElementById("pdfInput");
+const previewArea = document.getElementById("previewArea");
+
+dropzone.addEventListener("click", () => pdfInput.click());
+
+dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.style.background = "#f8f9fa"; });
+dropzone.addEventListener("dragleave", () => { dropzone.style.background = ""; });
+
+dropzone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    dropzone.style.background = "";
+    const f = e.dataTransfer.files[0];
+    if (f) {
+        pdfInput.files = e.dataTransfer.files;
+        handlePDF(f);
+    }
+});
+
+pdfInput.addEventListener("change", () => {
+    if (pdfInput.files.length > 0) {
+        handlePDF(pdfInput.files[0]);
+    }
+});
+
+function handlePDF(file) {
+    if (file.type !== "application/pdf") {
+        alert("Please upload a PDF file.");
+        return;
+    }
+    const maxSize = 100 * 1024 * 1024;
+    if (file.size > maxSize) {
+        alert("File size should not exceed 100 MB.");
+        return;
+    }
+    // show preview iframe
+    const fileURL = URL.createObjectURL(file);
+    const iframe = document.createElement("iframe");
+    iframe.src = fileURL;
+    iframe.style.width = "100%";
+    iframe.style.height = "300px";
+    previewArea.innerHTML = "";
+    previewArea.appendChild(iframe);
+}
+
+/* ---------- Recipient dynamic logic ---------- */
+const recipientsContainer = document.getElementById("recipientsContainer");
+const template = document.querySelector(".recipientBox"); // the first box acts as template
+const addRecipientBtn = document.getElementById("addRecipientBtn");
+
+const radioOrder = document.getElementById("radioOrder");
+const radioInOrder = document.getElementById("radioInOrder");
+
+function updateOrderNumbers() {
+    const show = radioInOrder.checked;
+    const boxes = document.querySelectorAll("[data-recipient]");
+    boxes.forEach((box, i) => {
+        const num = box.querySelector(".orderNumber");
+        const wrap = box.querySelector(".details-wrapper");
+        if (num) num.textContent = i + 1;
+        if (num) num.style.display = show ? "flex" : "none";
+        if (wrap) wrap.style.marginLeft = show ? "80px" : "0";
+    });
+}
+
+function updateDeleteButtonsVisibility() {
+    const boxes = document.querySelectorAll("[data-recipient]");
+    const showDelete = boxes.length > 1;
+    boxes.forEach((box) => {
+        const btn = box.querySelector(".deleteRecipientBtn");
+        if (btn) btn.style.display = showDelete ? "inline-flex" : "none";
+    });
+}
+
+const emailPattern = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[A-Za-z]{2,}$/;
+
+function attachKeyupValidation(inp) {
+    inp.addEventListener("keyup", () => {
+        const value = inp.value.trim();
+        const errorElem = inp.parentElement.querySelector("small");
+        if (!errorElem) return;
+        if (value === "") { errorElem.textContent = ""; return; }
+        if (!emailPattern.test(value)) {
+            errorElem.textContent = "Please enter a valid email";
+        } else {
+            errorElem.textContent = "";
+        }
+        // Duplicate email check
+        const allEmails = Array.from(document.querySelectorAll("input[type='email']"))
+            .filter(i => i !== inp)
+            .map(i => i.value.trim());
+        if (allEmails.includes(value)) {
+            errorElem.textContent = "This email is already used";
+        }
+    });
+}
+
+function reindexClone(clone, nextIndex) {
+    // inputs
+    clone.querySelectorAll("input").forEach((inp) => {
+        if (inp.type === "text") {
+            inp.id = `name_${nextIndex}`;
+            inp.name = `name_${nextIndex}`;
+            inp.value = "";
+        }
+        if (inp.type === "email") {
+            inp.id = `email_${nextIndex}`;
+            inp.name = `email_${nextIndex}`;
+            const err = inp.parentElement.querySelector("small");
+            if (err) { err.id = `emailError_${nextIndex}`; err.textContent = ""; }
+            inp.value = "";
+        }
+    });
+    // labels
+    clone.querySelectorAll("label").forEach((lbl) => {
+        const oldFor = lbl.getAttribute("for");
+        if (!oldFor) return;
+        const base = oldFor.split("_")[0];
+        lbl.setAttribute("for", `${base}_${nextIndex}`);
+    });
+    // select
+    const sel = clone.querySelector("select.form-select");
+    if (sel) {
+        sel.id = `signUserActions_${nextIndex}`;
+        sel.name = `signUserActions_${nextIndex}`;
+        sel.selectedIndex = 0;
+        sel.style.display = radioOrder.checked ? "block" : "none";
+    }
+    // order number
+    const num = clone.querySelector(".orderNumber");
+    if (num) num.textContent = nextIndex;
+    // attach validation
+    const emailInp = clone.querySelector("input[type='email']");
+    if (emailInp) attachKeyupValidation(emailInp);
+}
+
+addRecipientBtn.addEventListener("click", () => {
+    const boxes = document.querySelectorAll("[data-recipient]");
+    const nextIndex = boxes.length + 1;
+    const clone = template.cloneNode(true);
+    reindexClone(clone, nextIndex);
+
+    // delete button handler
+    const delBtn = clone.querySelector(".deleteRecipientBtn");
+    if (delBtn) {
+        delBtn.addEventListener("click", () => {
+            clone.remove();
+            updateOrderNumbers();
+            updateDeleteButtonsVisibility();
+        });
+    }
+    recipientsContainer.appendChild(clone);
+    updateOrderNumbers();
+    updateDeleteButtonsVisibility();
+});
+
+// Delete existing boxes
+recipientsContainer.addEventListener("click", (e) => {
+    const del = e.target.closest(".deleteRecipientBtn");
+    if (!del) return;
+    const box = del.closest(".recipientBox");
+    if (box) {
+        box.remove();
+        updateOrderNumbers();
+        updateDeleteButtonsVisibility();
+    }
+});
+
+radioOrder.addEventListener("change", updateOrderNumbers);
+radioInOrder.addEventListener("change", updateOrderNumbers);
+
+// Subject / message counters
+const subjectInput = document.getElementById("subjectInput");
+const messageInput = document.getElementById("messageInput");
+const subjectCount = document.getElementById("subjectCount");
+const messageCount = document.getElementById("messageCount");
+
+if (subjectInput) {
+    subjectCount.textContent = `${subjectInput.value.length}/100`;
+    subjectInput.addEventListener("input", function () {
+        subjectCount.textContent = `${this.value.length}/100`;
+    });
+}
+if (messageInput) {
+    messageCount.textContent = `${messageInput.value.length}/1000`;
+    messageInput.addEventListener("input", function () {
+        messageCount.textContent = `${this.value.length}/1000`;
+    });
+}
+
+// Attach validation to all existing email inputs
+document.querySelectorAll("input[type='email']").forEach(inp => attachKeyupValidation(inp));
+
+// initial UI adjustments
+updateOrderNumbers();
+updateDeleteButtonsVisibility();
+</script>
+
+{% endblock %}

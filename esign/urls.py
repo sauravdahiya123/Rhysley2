@@ -57,8 +57,12 @@ urlpatterns = [
     path('password_email/', views.password_email, name='password_email'),
     path('recipient_details/', views.recipient_details, name='recipient_details'),
     path('view-status/<str:token>/', views.mark_viewed_ajax, name='mark_viewed_ajax'),
+    path('status-check-document/<str:token>/', views.check_flow_status, name='check_flow_status'),
 
-
+    path('document/<int:pk>/edit/', views.edit_document, name='edit_document'),
+    path('document/<int:pk>/edit-sign/', views.edit_signing_page, name='edit_signing_link'),
+    path('update_signing_link/<int:pk>/', views.update_signing_link, name='update_signing_link'),
+    path("documents/<int:pk>/cancel/", views.cancel_document, name="cancel_document"),
 
 ]
 
@@ -66,3 +70,4 @@ urlpatterns = [
 # SINCH_APPID=mehasmbalt
 # SINCH_USERID=mehasmbalt
 # SINCH_PASSWORD=meharf_08
+

@@ -317,6 +317,7 @@ a:hover .button-hightlight{
   .show-preview #previewArea, .show-preview #dropzone, .preview-card{
     width: 100% !important;
   }
+  
   .preview-card{
     position: relative;
   }
