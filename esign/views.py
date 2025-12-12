@@ -594,33 +594,28 @@ def user_login(request):
        
 
     return render(request, 'esign/login.html')
-
 def contact_us(request):
     if request.method == "POST":
-        name = request.POST.get("inputContactName")
-        email = request.POST.get("inputContactEmail")
-        phone = request.POST.get("inputContactPhone")
-        company = request.POST.get("inputContactCompanyName")
+        message = request.POST.get("inputMessage")
+        screenshot = request.FILES.get("inputScreenshot")
 
         # Email body
         body = f"""
-        <h3>New Contact Form Submission</h3>
-        <p><strong>Name:</strong> {name}</p>
-        <p><strong>Email:</strong> {email}</p>
-        <p><strong>Phone:</strong> {phone}</p>
-        <p><strong>Company Name:</strong> {company}</p>
+        <h3>New Contact Message</h3>
+        <p><strong>Message:</strong><br>{message}</p>
         """
 
-        # Send to your email
-        to_email = ["sauravdaiya870@gmail.com"]
-
         email_msg = EmailMessage(
-            subject="New Contact Form Submission",
+            subject="New Contact Message",
             body=body,
-            from_email=settings.EMAIL_HOST_USER,     # Sender = your configured email
-            to=to_email
+            from_email=settings.EMAIL_HOST_USER,
+            to=['sauravdahiya870@gmail.com'],
         )
         email_msg.content_subtype = "html"
+
+        # If screenshot uploaded → attach it
+        if screenshot:
+            email_msg.attach(screenshot.name, screenshot.read(), screenshot.content_type)
 
         try:
             email_msg.send()
@@ -632,6 +627,7 @@ def contact_us(request):
         return redirect("contact_us")
 
     return render(request, "esign/contact_us.html")
+
 
 def contact_view(request):
     # Clear old messages
@@ -937,7 +933,7 @@ def document_list(request):
         docs = docs.order_by('-created_at')
 
     for d in docs:
-        d.show_edit = any(not f.is_viewed for f in d.sign_flow.all())
+        d.show_edit = any(f.is_viewed for f in d.sign_flow.all())
 
 
     # Pagination
@@ -1459,9 +1455,16 @@ def check_terms(request):
 
 def disclosure_view(request):
     return render(request, "esign/disclosure.html")
+from django.http import Http404
 
 def sign_document(request, token, encoded_email=None):
-    st = get_object_or_404(DocumentSignFlow, token=token)
+    # return JsonResponse({'ok': "fdsa", 'error': 'POST only'}, status=405)
+    try:
+        st = get_object_or_404(DocumentSignFlow, token=token)
+    except Http404:
+        return render(request, 'esign/token_invalid.html', {
+            "message": "Invalid signing token."
+        })
     doc = st.document
     # next_flow = DocumentSignFlow.objects.filter(
     #     document=doc,
@@ -1470,7 +1473,6 @@ def sign_document(request, token, encoded_email=None):
     #     'id', 'recipient_name', 'recipient_email', 'order', 'role', 'assigned_at'
     # ).first()
 
-    # return JsonResponse({'ok': next_flow, 'error': 'POST only'}, status=405)
 
     try:
         signing_token = SigningToken.objects.get(document=doc, token=token)
@@ -1496,6 +1498,7 @@ def sign_document(request, token, encoded_email=None):
         return render(request, 'esign/token_invalid.html', {
             "message": "You are not authorized to sign this document."
         })
+    # return JsonResponse({"a":doc.is_editable})
     
     if doc.is_editable:
         return render(request, 'esign/token_invalid.html', {
@@ -1503,15 +1506,15 @@ def sign_document(request, token, encoded_email=None):
         })
 
     # # Already signed check
-    # invalid_states = {
-    #     flow.is_signed: "You have already signed this document.",
-    #     flow.is_canceled: "You have canceled signing for this document.",
-    #     flow.assigned_by is not None: "This document has already been assigned to someone else."
-    # }
+    invalid_states = {
+        flow.is_signed: "You have already signed this document.",
+        flow.is_canceled: "You have canceled signing for this document.",
+        flow.assigned_by is not None: "This document has already been assigned to someone else."
+    }
 
-    # for condition, message in invalid_states.items():
-    #     if condition:
-    #         return render(request, 'esign/token_invalid.html', {"message": message})
+    for condition, message in invalid_states.items():
+        if condition:
+            return render(request, 'esign/token_invalid.html', {"message": message})
 
 
     if st.security_token:  # sirf tab check kare jab token set hai
@@ -1810,10 +1813,10 @@ def apply_signatures(request):
         )
         email_self.send(fail_silently=False)
 
-        total_recipients = DocumentSignFlow.objects.filter(document=doc).count()
-        print("total_recipients",total_recipients)
-        if total_recipients > 1:
+        total_recipients = DocumentSignFlow.objects.filter(document=doc, order=2).exists()
+        if total_recipients:
 
+       
             all_signed = not DocumentSignFlow.objects.filter(document=doc, is_signed=False).exists()
             print("all_signed",all_signed)
             if all_signed:
@@ -3628,14 +3631,15 @@ def check_flow_status(request, token):
 
     # Query me hi conditions laga di
     flow = DocumentSignFlow.objects.filter(
-        Q(token=token) &
-        (
-            Q(is_signed=True) |
-            Q(is_canceled=True) |
-            # Q(is_viewed=True) |
-            ~Q(assigned_by=None)  # assigned_by NOT NULL
-        )
+    Q(token=token) &
+    (
+        Q(is_signed=True) |
+        Q(is_canceled=True) |
+        Q(document__is_canceled=True) |   # <-- Document ka is_canceled
+        ~Q(assigned_by=None)
+    )
     ).exists()
+
 
     return JsonResponse({
         "refresh": flow   # True → page reload
@@ -3650,8 +3654,7 @@ EMAIL_RE = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
 
 def edit_document(request, pk):
     document = get_object_or_404(Document, pk=pk)
-    document.is_editable = True
-    document.save()
+   
     if request.method == "POST":
         # Collect basic fields
        
@@ -3662,6 +3665,7 @@ def edit_document(request, pk):
         sign_order_option = request.POST.get("signOrderOption", "")  # expect "in_order" or "order"
 
         sign_order_enabled = (sign_order_option == "in_order")  # matches your radio logic
+
 
         # Validate subject/message minimal
         errors = {}
@@ -3677,21 +3681,30 @@ def edit_document(request, pk):
         while True:
             name_key = f"name_{idx}"
             email_key = f"email_{idx}"
+            id = f"id_{idx}"
             action_key = f"signUserActions_{idx}"
 
             if name_key not in request.POST:
                 break
 
+            id = request.POST.get(id, "").strip() or ""
             name = request.POST.get(name_key, "").strip()
             email = request.POST.get(email_key, "").strip()
             action = request.POST.get(action_key, "").strip() or "Needs to Sign"
             seen_emails.add(email)
-
+            if sign_order_option == "in_order":
+                # sabka order same
+                order_value = 1
+            else:
+                # increment order (1,2,3,4…)
+                order_value = idx
+            
             recipients.append({
                 "name": name,
                 "email": email,
                 "action": action,
-                "order": idx if sign_order_enabled else 1
+                "id": id,
+                "order": order_value
             })
 
             idx += 1
@@ -3705,11 +3718,13 @@ def edit_document(request, pk):
             if uploaded_file.size > max_size:
                 errors['file'] = "File size should not exceed 100 MB."
 
+        # return JsonResponse({"error": recipients}, status=500)
 
         try:
 
 
 
+            SigningToken.objects.filter(document=document).delete()
             with transaction.atomic():
                 # return JsonResponse({"error": document.reminder_frequency}, status=500)
 
@@ -3724,7 +3739,7 @@ def edit_document(request, pk):
                     document.file = uploaded_file
 
                 document.save()
-                document.sign_flow.all().delete()
+                # document.sign_flow.all().delete()
                 # return JsonResponse({"error": recipients}, status=500)
 
                 # Create new flows
@@ -3732,6 +3747,8 @@ def edit_document(request, pk):
                 document = get_object_or_404(Document, pk=pk)
 
                 for r in recipients:
+                    # return JsonResponse({"error":r}, status=404)
+
                     token = secrets.token_hex(32)  # unique token
                     if r["action"]  == "Needs to Sign":
                         role = "signer"
@@ -3752,31 +3769,64 @@ def edit_document(request, pk):
                     #     order=r["order"]
                     # ))
 
+                    # return JsonResponse({"error": r['id']}, status=500)
+                    if r['id']:
+                        # return JsonResponse({"error": "Box not found"}, status=500)
+
+                        # boxes = SignatureBox.objects.filter(id=r['id'])
+                        data = DocumentSignFlow.objects.filter(id=r['id']).first()
+                        # return JsonResponse({"error": boxes}, status=500)
+                        boxes = SignatureBox.objects.filter(
+                            assigned_email=data.recipient_email,
+                            document=document
+                        )
+                        # return JsonResponse({"error": boxes}, status=500)
+
+
+                        requested_email = r['email']   # request ka email
+
+                        if not boxes.exists():
+                            pass
+                            # return JsonResponse({"error": data.recipient_email}, status=500)
+
+                        # Loop through all boxes
+                        for box in boxes:
+                            if box.assigned_email != requested_email:
+                                box.assigned_email = requested_email
+                                box.save()
+                        data.delete()
+
+
+                        print("All boxes updated successfully.")
+
+
+                        # return JsonResponse({"error": "Box not found"}, status=500)
+
                     flow = DocumentSignFlow.objects.create(
-                        document=document,
-                        token=token,
-                        recipient_name=r["name"],
-                        recipient_email=r["email"],
-                        role=role,
-                        order=r["order"],
-                         is_viewed=False
-                    )
+                            document=document,
+                            token=token,
+                            recipient_name=r["name"],
+                            recipient_email=r["email"],
+                            role=role,
+                            order=r["order"],
+                            is_viewed=False
+                        )
                     new_flows.append({
-                        "id": flow.id,
-                        "document_id": flow.document.id,
-                        "token": flow.token,
-                        "recipient_name": flow.recipient_name,
-                        "recipient_email": flow.recipient_email,
-                        "role": flow.role,
-                        "order": flow.order
-                    })
+                            "id": flow.id,
+                            "document_id": flow.document.id,
+                            "token": flow.token,
+                            "recipient_name": flow.recipient_name,
+                            "recipient_email": flow.recipient_email,
+                            "role": flow.role,
+                            "order": flow.order
+                        })
+                    expires = timezone.now() + timedelta(days=7)
+                    SigningToken.objects.create(document=document, token=token, expires_at=expires)
+
                                 
-
-                    # return JsonResponse({"error": new_flows}, status=500)
-
-                # DocumentSignFlow.objects.bulk_create(new_flows)
                 # return JsonResponse({"error": new_flows}, status=500)
-
+            document.is_editable = False
+            document.save()
             messages.success(request, "Document updated successfully.")
             return redirect('edit_signing_link', pk=pk)  # redirect to edit signature page
 
@@ -3800,13 +3850,22 @@ def edit_document(request, pk):
     initial_recipients = []
     signed_recipients = document.sign_flow.filter()
 
+    # flows = document.sign_flow.all()
+
+
+    if signed_recipients.filter(is_viewed=True).exists():
+        messages.success(request, "Cannot edit because at least one receiver has already opend.")
+        return redirect('document_list')
+    document.is_editable = True
+    document.save()
 
     for r in signed_recipients:
         initial_recipients.append({
             "name": r.recipient_name,
             "email": r.recipient_email,
             "action": r.role,
-            "order": r.order
+            "order": r.order,
+            "id": r.id,
         })
     # return JsonResponse({"error": initial_recipients}, status=500)
 
@@ -3837,6 +3896,8 @@ def edit_signing_page(request, pk):
     boxes = SignatureBox.objects.filter(document=document, assigned_email__in=flow_emails)
 
     # Prepare boxes JSON to inject into JS
+    # return JsonResponse({"error": recipients}, status=500)
+
     boxes_data = []
     for b in boxes:
         boxes_data.append({
@@ -3888,7 +3949,7 @@ def update_signing_link(request, pk):
         return JsonResponse({"error": "Invalid JSON format"}, status=400)
 
     boxes = data.get("boxes", [])
-    # return JsonResponse({"error": boxes}, status=400)
+    # return JsonResponse({"error": boxes})
 
     for b in boxes:
         print("Saurav")
@@ -3985,25 +4046,28 @@ def cancel_document(request, pk):
     document = get_object_or_404(Document, pk=pk, owner=request.user)
 
     flows = document.sign_flow.all()
+    flows = document.sign_flow.filter(Q(is_signed=True) | Q(order=1))
 
     # # Check if already canceled
-    # if document.is_canceled:
-    #     return JsonResponse({
-    #         "success": False,
-    #         "message": "Document is already cancelled."
-    #     })
-
-    # Check if any receiver already signed
-    if flows.filter(is_viewed=True).exists():
+    if document.is_canceled:
         return JsonResponse({
             "success": False,
-            "message": "Cannot cancel because at least one receiver has already signed."
+            "message": "Document is already cancelled."
         })
+
+    # Check if any receiver already signed
+    # if flows.filter(is_viewed=True).exists():
+    #     return JsonResponse({
+    #         "success": False,
+    #         "message": "Cannot cancel because at least one receiver has already signed."
+    #     })
 
     # Mark as canceled
     document.is_canceled = True
     document.status = "cancelled"  # optional but recommended
     document.save()
+    SigningToken.objects.filter(document=document).delete()
+
 
     data = json.loads(request.body.decode('utf-8'))
     reason = data.get("reason", "")

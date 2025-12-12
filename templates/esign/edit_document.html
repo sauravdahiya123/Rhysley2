@@ -87,7 +87,7 @@
     <h3 class="mb-3 h4">Recipients</h3>
 
     <!-- RADIO -->
-    <div class="mb-4 d-flex align-items-center gap-4">
+    <div class="mb-4 d-flex align-items-center gap-4 d-none " >
         <div class="form-check">
             <input class="form-check-input" onclick="s(0)"  value="in_order" type="radio" name="signOrderOption" id="radioOrder" {% if sign_order_enabled %}checked{% endif %}>
             <label class="form-check-label" for="radioOrder">In Order</label>
@@ -114,6 +114,7 @@
         {# Render existing recipients server-side so JS can clone from first element #}
         {% if recipients_initial %}
             {% for r in recipients_initial %}
+                              <input type="hidden" class="form-control" id="id_{{ forloop.counter }}" name="id_{{ forloop.counter }}" placeholder="Enter name" required value="{{ r.id|escape }}">
                 <div class="recipientBox border rounded p-4 mb-2 position-relative" data-recipient>
                     <div class="orderNumber bg-info text-white px-3 py-4 position-absolute top-50 translate-middle-y start-0 fs-4 fw-bold" contenteditable="false" style="display: {% if sign_order_enabled %}flex{% else %}none{% endif %};">
                         {{ forloop.counter }}

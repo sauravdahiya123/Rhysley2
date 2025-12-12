@@ -219,7 +219,7 @@
   </div>
 
   <div class="form-check">
-    <input class="form-check-input" type="checkbox" id="boxRequiredCheckbox">
+    <input class="form-check-input" type="checkbox" id="boxRequiredCheckbox" checked>
     <label class="form-check-label" for="boxRequiredCheckbox">Required</label>
   </div>
 </div>
@@ -521,7 +521,7 @@ templates.forEach(template => {
     draggingBox.id = newId;
     draggingBox.dataset.boxId = newId;
     draggingBox.dataset.assignedEmail = ""; // will store assigned email
-    draggingBox.dataset.required = "false"; // will store required flag
+    draggingBox.dataset.required = "true"; // will store required flag
 
     pdfContainer.appendChild(draggingBox);
 
@@ -541,6 +541,7 @@ templates.forEach(template => {
 function showFormatSidebar(box) {
   const sidebar = document.getElementById('formatSidebar');
   sidebar.classList.add('active');
+  
 
   // Reset values to current box styles
   document.getElementById('fontFamily').value = box.style.fontFamily || 'Arial';
@@ -827,6 +828,7 @@ function enableEmailInSidebar(email) {
 
 // --- Auto assign first email to a box ---
 function autoAssignFirstEmail(box) {
+  
     const emails = getRecipientEmails();
     if (!emails || emails.length === 0) return;
 
@@ -845,6 +847,7 @@ function autoAssignFirstEmail(box) {
     // Only assign if not already assigned
     if (!box.dataset.assignedEmail) {
         box.dataset.assignedEmail = firstEmail;
+         
     }
 }
 
@@ -885,6 +888,8 @@ function openPairingForBox(box) {
       if (prev && prev !== "" && prev !== email) {
         enableEmailInSidebar(prev);
       }
+
+      
 
       box.dataset.assignedEmail = email;
 

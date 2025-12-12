@@ -1643,6 +1643,22 @@ function initNextRequiredButton() {
 let lastOptionalBoxId = null; 
 let optionalVisitedOnce = false;
 
+
+function countFutureUnfilledBoxes(boxes, currentIndex) {
+    let count = 0;
+
+    for (let i = currentIndex + 1; i < boxes.length; i++) {
+        const box = boxes[i];
+        const isFilled = box.dataset.sigId || (box.style.backgroundImage && box.style.backgroundImage !== "none");
+
+        if (!isFilled) count++;
+    }
+
+    return count;
+}
+
+optionalend = 0;
+
 function scrollToNextRequired() {
     const container = document.getElementById("pdf-container");
     const boxes = Array.from(container.querySelectorAll(".sig-box-db"));
@@ -1660,31 +1676,103 @@ function scrollToNextRequired() {
         }
     });
 
+
+
+// Check if all required boxes are filled
+let allRequiredFilled = true;
+for (let i = 0; i < boxes.length; i++) {
+    const box = boxes[i];
+    const isRequired = box.dataset.required === "true";
+    const isFilled = box.dataset.sigId || (box.style.backgroundImage && box.style.backgroundImage !== "none");
+
+    if (isRequired && !isFilled) {
+        allRequiredFilled = false;
+        break;
+    }
+}
+console.log("optionalend",optionalend);
+if(optionalend == 1){
+
+  window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+
+    const btn = document.getElementById("next-required-btn");
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = "All boxes checked";
+    }
+}
+// Count optional boxes remaining
+let optionalRemaining = boxes.filter(box => box.dataset.required !== "true").length;
+let futureUnfilled = countFutureUnfilledBoxes(boxes, currentIndex);
+// --- If–Else Logic ---
+if (!allRequiredFilled) {
+    // alert("Some required boxes are still empty!");
+} 
+else if (optionalRemaining > 0) {
+
+    // ⭐ अगर futureUnfilled = 0 → मतलब last optional पहुँच गए
+
+
+     if (optionalend == 1) {
+
+        window.scrollTo({ 
+            top: document.body.scrollHeight, 
+            behavior: "smooth" 
+        });
+
+        const btn = document.getElementById("next-required-btn");
+        if (btn) {
+            btn.disabled = true;
+            btn.innerText = "All boxes checked";
+        }
+
+        optionalend = 2; // ताकि दूसरा बार scroll ना करे
+        return;
+    }
+
+
+    if (futureUnfilled == 0) {
+        optionalend = 1;   // Flag ON
+    }
+
+    // ⭐ अगर last optional था और NEXT फिर से दबाया → bottom scroll
+   
+
+    // Normal optional info
+    // alert(
+    //     `Optional boxes remaining overall: ${optionalRemaining}\n` +
+    //     `Aage unfilled boxes (after current one): ${futureUnfilled}`
+    // );
+} 
+else {
+
+    // All required + no optional → bottom scroll
+    window.scrollTo({ 
+        top: document.body.scrollHeight, 
+        behavior: "smooth" 
+    });
+
+    const btn = document.getElementById("next-required-btn");
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = "All boxes checked";
+    }
+
+    // alert("All boxes completed! Scrolled to bottom.");
+}
+
+
+
     // --- CHECK FUTURE REQUIRED / OPTIONAL ---
 
-    function hasFutureUnfilledRequired(startIndex) {
-        for (let i = startIndex; i < boxes.length; i++) {
-            let b = boxes[i];
-            let isFilled = b.dataset.sigId || (b.style.backgroundImage && b.style.backgroundImage !== "none");
-            if (!isFilled && b.dataset.required === "true") return true;
-        }
-        return false;
-    }
-
-    function hasFutureUnfilledOptional(startIndex) {
-        for (let i = startIndex; i < boxes.length; i++) {
-            let b = boxes[i];
-            let isFilled = b.dataset.sigId || (b.style.backgroundImage && b.style.backgroundImage !== "none");
-            if (!isFilled && b.dataset.required !== "true") return true;
-        }
-        return false;
-    }
+ 
 
     let startIndex = currentIndex;
     let foundBox = null;
 
     do {
         const box = boxes[currentIndex];
+        console.log("box",box);
         const type = box.dataset.boxType;
         const isFilled = box.dataset.sigId || (box.style.backgroundImage && box.style.backgroundImage !== "none");
         const hasBgImage = box.style.backgroundImage && box.style.backgroundImage !== "none";
@@ -1722,27 +1810,8 @@ function scrollToNextRequired() {
             box.innerText = "Optional";
 
             // CHECK: Are there future required or optional boxes?
-            const futureReq = hasFutureUnfilledRequired(currentIndex + 1);
-            const futureOpt = hasFutureUnfilledOptional(currentIndex + 1);
-
-            if (!futureReq && !futureOpt) {
-                // LAST BOX
-                if (lastOptionalBoxId === box.dataset.id) {
-                    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
-
-                    const btn = document.getElementById("next-required-btn");
-                    if (btn) {
-                        btn.disabled = true;
-                        btn.innerText = "All boxes checked";
-                    }
-                    return;
-                }
-
+          
                 lastOptionalBoxId = box.dataset.id;
-            } else {
-                // More boxes exist → no bottom scroll
-                lastOptionalBoxId = box.dataset.id;
-            }
 
             foundBox = box;
             break;
@@ -1751,10 +1820,17 @@ function scrollToNextRequired() {
         currentIndex = (currentIndex + 1) % boxes.length;
 
     } while (currentIndex !== startIndex);
-
     if (foundBox) {
         foundBox.scrollIntoView({ behavior: "smooth", block: "center" });
         currentIndex = (currentIndex + 1) % boxes.length;
+    }else{
+                                        window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+ const btn = document.getElementById("next-required-btn");
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.innerText = "All boxes checked";
+                    }
+                    return;
     }
 }
 
@@ -1775,7 +1851,7 @@ function startStatusWatcher(token) {
                     location.reload();
                 }
             });
-    }, 2000);
+    }, 7000);
 }
 
 document.addEventListener("DOMContentLoaded", () => {

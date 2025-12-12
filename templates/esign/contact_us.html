@@ -5,16 +5,28 @@
 
 <body>
         
-    {% if messages %}
-      <div class="mb-3">
-        {% for message in messages %}
-          <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-          </div>
-        {% endfor %}
-      </div>
-    {% endif %}
+{% if messages %}
+  <div class="d-flex justify-content-center mt-3">
+    {% for message in messages %}
+      {% if forloop.last %}
+        <div id="autoDismissAlert" class="alert alert-{{ message.tags }} alert-dismissible fade show text-center" role="alert" style="min-width: 300px;">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+
+  <script>
+    setTimeout(() => {
+      const alert = document.getElementById('autoDismissAlert');
+      if (alert) {
+        const bsAlert = new bootstrap.Alert(alert);
+        bsAlert.close();
+      }
+    }, 2000); // 2 seconds
+  </script>
+{% endif %}
 
 
 
@@ -49,26 +61,44 @@
                     </div> --> <!--end col-->
                     <div class="col-md-6 offset-md-1">
                         <h2 class="mb-4">Questions? Let's Talk.</h2>
-                       <form method="post" action="" class="mb-4">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            <label for="inputContactName" class="form-label">Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" required="" id="inputContactName" name="inputContactName">
-                        </div>
-                        <div class="mb-3">
-                            <label for="inputContactEmail" class="form-label">Email <span class="text-danger">*</span></label>
-                            <input type="email" class="form-control" required="" id="inputContactEmail" name="inputContactEmail">
-                        </div>
-                        <div class="mb-3">
-                            <label for="inputContactPhone" class="form-label">Phone Number <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" required="" id="inputContactPhone" name="inputContactPhone">
-                        </div>
-                        <div class="mb-3">
-                            <label for="inputContactCompanyName" class="form-label">Company Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" required="" id="inputContactCompanyName" name="inputContactCompanyName">
-                        </div>
-                        <button type="submit" class="btn btn-primary">Submit Contact Form</button>
-                    </form>
+                    <form method="post" action="" class="mb-4" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <div class="mb-3">
+        <label for="inputMessage" class="form-label">Message <span class="text-danger">*</span></label>
+        <textarea class="form-control" id="inputMessage" name="inputMessage" rows="4" required></textarea>
+    </div>
+
+    <div class="mb-3">
+        <label for="inputScreenshot" class="form-label">Upload Screenshot (optional)</label>
+        <input type="file" class="form-control" id="inputScreenshot" name="inputScreenshot" accept="image/*" onchange="previewImage(event)">
+    </div>
+
+    <!-- Image Preview Box -->
+    <div class="mb-3" id="previewBox" style="display:none;">
+        <label class="form-label">Preview:</label><br>
+        <img id="previewImg" src="" alt="Image Preview" style="max-width:300px; border:1px solid #ccc; padding:5px; border-radius:6px;">
+    </div>
+
+    <button type="submit" class="btn btn-primary">Submit</button>
+</form>
+<script>
+function previewImage(event) {
+    const file = event.target.files[0];
+    const previewBox = document.getElementById("previewBox");
+    const previewImg = document.getElementById("previewImg");
+
+    if (file) {
+        previewImg.src = URL.createObjectURL(file);
+        previewBox.style.display = "block";
+    } else {
+        previewBox.style.display = "none";
+        previewImg.src = "";
+    }
+}
+</script>
+
+
 
                         <p class="position-relative ps-4"><a href="mailto:contact@eazeesign.com" class="d-block"><i class="iconoir-mail fs-18 me-1 position-absolute start-0 top-0"></i> contact@eazeesign.com</a></p>
 

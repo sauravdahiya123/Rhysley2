@@ -73,7 +73,9 @@
   <form method="post" id="signing-form" action="{% url 'update_signing_link' document.pk %}">
       {% csrf_token %}
       <input type="hidden" name="boxes" id="boxes-input">
+      <div class="text-end">
       <button type="submit" class="btn btn-primary mt-3" onclick="serializeBoxes(event)">Save & Send</button>
+      </div>
   </form>
 
   <div class="format-sidebar bg-light p-3 shadow-lg" id="formatSidebar">
@@ -523,6 +525,32 @@ function serializeBoxes(e) {
 
     document.getElementById("signing-form").submit();
 }
+
+
+const sidebar = document.getElementById("formatSidebar");
+
+document.addEventListener("click", (e) => {
+    // Check if click target is a sig-box
+    
+    if (e.target.closest(".sig-box")) {
+        // Box clicked → open sidebar
+        sidebar.classList.add("active");
+
+        const box = e.target.closest(".sig-box");
+
+        // Populate sidebar data
+        document.querySelectorAll("#emailList .email-check").forEach(chk => {
+            chk.checked = (chk.value === box.dataset.assignedEmail);
+        });
+        document.getElementById("isRequired").checked = box.dataset.required === "true";
+
+    } else {
+        // Clicked elsewhere → close sidebar
+        sidebar.classList.remove("active");
+    }
+});
+
+
 </script>
 
 {% endblock %}
