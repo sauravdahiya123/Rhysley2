@@ -538,6 +538,69 @@ templates.forEach(template => {
 
 
 
+// Move dragging box
+document.addEventListener('mousemove', e => {
+  if(!draggingBox) return;
+  const pageDivs = [...pdfContainer.getElementsByClassName('pdf-page')];
+  let foundPage = null;
+  for(const pageDiv of pageDivs){
+    const rect = pageDiv.getBoundingClientRect();
+    if(e.clientX >= rect.left && e.clientX <= rect.right &&
+     e.clientY >= rect.top && e.clientY <= rect.bottom){
+      foundPage = pageDiv; break;
+  }
+}
+if(foundPage){
+  currentPage = foundPage;
+  const rect = foundPage.getBoundingClientRect();
+  let x = e.clientX - rect.left - draggingBox.offsetWidth/2;
+  let y = e.clientY - rect.top - draggingBox.offsetHeight/2;
+  x = Math.max(0, Math.min(rect.width - draggingBox.offsetWidth, x));
+  y = Math.max(0, Math.min(rect.height - draggingBox.offsetHeight, y));
+  draggingBox.style.left = x + 'px';
+  draggingBox.style.top = y + 'px';
+  if(draggingBox.parentNode !== foundPage){
+    foundPage.appendChild(draggingBox);
+  }
+}
+});
+
+document.addEventListener('mouseup', e => {
+  if (!draggingBox) return;
+ if (!currentPage) {
+    draggingBox.remove();
+    draggingBox = null;
+    isDraggingSignature = false;
+    return;
+  }
+  // 1️⃣ First: finish the drag and attach handles
+  draggingBox.classList.remove('dragging');
+
+  if (currentPage) {
+    // makeDraggable will create resize + rotate handles here
+    makeDraggable(draggingBox, currentPage);
+  }
+
+  // 2️⃣ Now we can safely auto-assign email AND color rotate-handle,
+  // because rotateHandle now exists on this box.
+  selectedBox = draggingBox;
+  autoAssignFirstEmail(selectedBox);
+
+  // 3️⃣ Open sidebar + formatting + pairing UI
+  setTimeout(() => {
+    sidebar.classList.add('active');
+  }, 50);
+
+  showFormatSidebar(selectedBox);
+  openPairingForBox(selectedBox);
+
+  // 4️⃣ Cleanup
+  draggingBox = null;
+  currentPage = null;
+  isDraggingSignature = false;
+});
+
+
 function showFormatSidebar(box) {
   const sidebar = document.getElementById('formatSidebar');
   sidebar.classList.add('active');
@@ -586,64 +649,6 @@ document.getElementById('underlineBtn').addEventListener('click', () => {
     selectedBox.style.textDecoration = selectedBox.style.textDecoration === 'underline' ? 'none' : 'underline';
 });
 
-
-
-// Move dragging box
-document.addEventListener('mousemove', e => {
-  if(!draggingBox) return;
-  const pageDivs = [...pdfContainer.getElementsByClassName('pdf-page')];
-  let foundPage = null;
-  for(const pageDiv of pageDivs){
-    const rect = pageDiv.getBoundingClientRect();
-    if(e.clientX >= rect.left && e.clientX <= rect.right &&
-     e.clientY >= rect.top && e.clientY <= rect.bottom){
-      foundPage = pageDiv; break;
-  }
-}
-if(foundPage){
-  currentPage = foundPage;
-  const rect = foundPage.getBoundingClientRect();
-  let x = e.clientX - rect.left - draggingBox.offsetWidth/2;
-  let y = e.clientY - rect.top - draggingBox.offsetHeight/2;
-  x = Math.max(0, Math.min(rect.width - draggingBox.offsetWidth, x));
-  y = Math.max(0, Math.min(rect.height - draggingBox.offsetHeight, y));
-  draggingBox.style.left = x + 'px';
-  draggingBox.style.top = y + 'px';
-  if(draggingBox.parentNode !== foundPage){
-    foundPage.appendChild(draggingBox);
-  }
-}
-});
-
-document.addEventListener('mouseup', e => {
-  if (!draggingBox) return;
-
-  // 1️⃣ First: finish the drag and attach handles
-  draggingBox.classList.remove('dragging');
-
-  if (currentPage) {
-    // makeDraggable will create resize + rotate handles here
-    makeDraggable(draggingBox, currentPage);
-  }
-
-  // 2️⃣ Now we can safely auto-assign email AND color rotate-handle,
-  // because rotateHandle now exists on this box.
-  selectedBox = draggingBox;
-  autoAssignFirstEmail(selectedBox);
-
-  // 3️⃣ Open sidebar + formatting + pairing UI
-  setTimeout(() => {
-    sidebar.classList.add('active');
-  }, 50);
-
-  showFormatSidebar(selectedBox);
-  openPairingForBox(selectedBox);
-
-  // 4️⃣ Cleanup
-  draggingBox = null;
-  currentPage = null;
-  isDraggingSignature = false;
-});
 
 
 function clearSidebarSelection() {
@@ -1032,6 +1037,9 @@ function serializeBoxes(event,type){
   
 
 }
+
+
+
 </script>
 
 {% endblock %}
